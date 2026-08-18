@@ -1,0 +1,54 @@
+# Launch checklist
+
+This is the small release checklist for the first public version. It deliberately separates actions that change GitHub state from local preparation.
+
+## Positioning and launch material
+
+The product is for the moment a user stops composing a short reply and starts working across two surfaces: an earlier answer, source material, code, a log, or a long draft. The right-side Composer keeps that reference material visible while giving the input its own vertical working space. It is an optional layout choice, not a new chat workflow.
+
+**English one-liner:**
+
+> Read here. Compose there. Dock DSH Composer to the right when a long prompt needs the conversation to stay in view.
+
+**中文一句话：**
+
+> 阅读留在这里，输入放到旁边：长输入需要不断对照对话时，把 DSH Composer 停靠到右侧。
+
+The README uses two intentionally different assets:
+
+- `assets/hero.svg` is the static overview for GitHub previews and link cards. It explains the reason for the layout without pretending to be a screenshot of a user session.
+- `assets/social-preview.png` is the 1280×640 PNG derived from that overview, ready for the GitHub repository social-preview setting.
+- `assets/demo.gif` is a four-step concept animation: bottom Composer, docking transition, side-by-side work, and Composer popups in the narrow right column.
+
+Do not describe the layout as making every conversation larger or faster. Its concrete benefit is keeping a referenced conversation visible beside a long input. Use examples such as long instructions, revisions against earlier answers, code and log excerpts, and multi-step tasks.
+
+## Discovery
+
+- Add the repository topics `dsh-plugin`, `deepseek-harness`, `dsh`, and `ui-enhancement`.
+- Submit one YAML entry to [awesome-dsh-plugin](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin) under `category: ui` after the repository has existed for at least one day and has at least ten meaningful commits. The project uses the list's generated README and does not edit that README by hand.
+- The same curated entry is the route used by [dsh-market](https://github.com/dsh-market/dsh-market); the market README asks plugin authors to submit there rather than opening a market-catalog PR.
+
+## Official DSH
+
+Post one concise item in the official repository's **Show Your Plugins!** discussion category after the public repository URL and release tag are live. Link the README, install command, compatibility line, and one limitation. Avoid claiming endorsement or security review.
+
+Suggested title:
+
+> DSH Composer Layout — bottom or right-side Composer placement for Web
+
+Suggested body:
+
+> `dsh-composer-layout` adds an optional Web-only Composer layout: keep the input at the bottom or dock it in a right-side column. It remembers placement per session, keeps the right pane resizable, and positions Composer popups so they are not clipped in a narrow window. It does not change prompts, models, token accounting, or tools.
+>
+> Install: `dsh plugin --profile web add github:lavapapa/dsh-composer-layout#v0.1.0`
+>
+> README: https://github.com/lavapapa/dsh-composer-layout
+>
+> Tested against the `deepseek-ai/deepseek-harness` source checkout at commit `47f9438`. Feedback on narrow layouts and compatibility with newer DSH Web releases is welcome.
+
+## Evidence to keep with the launch
+
+- `node scripts/verify-package.mjs`
+- `npm pack --dry-run`
+- `dsh plugin --profile web add <release-tarball>` followed by `dsh --profile web --dump-config`
+- A browser smoke test that checks both placements and a popup trigger in the right layout.

@@ -1,0 +1,502 @@
+import {
+  useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore,
+  type KeyboardEvent, type MouseEvent, type PointerEvent,
+} from 'react'
+import { createPortal } from 'react-dom'
+import type { PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
+import type {} from '@deepseek-ai/dsh-client-ui-conversation/client'
+import type { SettingsScope } from '@deepseek-ai/dsh-client-runtime/client'
+import type { ComposerLayoutSettings } from '../settings.ts'
+import { COMPOSER_LAYOUT_DEFAULTS } from '../settings.ts'
+import {
+  readLocalSettings, readSessionLayout, writeSessionLayout,
+  type ComposerSessionLayout,
+} from './settings-storage.ts'
+import css from './ComposerSplitAction.module.css'
+
+const DEFAULT_WIDTH = 420
+const MIN_COMPOSER_WIDTH = 360
+const MIN_CHAT_WIDTH = 420
+// Keep the side layout through DSH's 1024px sidebar transition. A 320px Chat
+// column remains readable beside the 360px minimum Composer; conceding earlier
+// would make the Composer jump when the native sidebar expands.
+const MIN_CHAT_LAYOUT_WIDTH = 320
+const SIDE_LAYOUT_BREAKPOINT = MIN_COMPOSER_WIDTH + MIN_CHAT_LAYOUT_WIDTH
+const HANDLE_HIT_WIDTH = 10
+
+export interface ComposerSplitInjected {
+  /** Whether the running DSH exposes the native placement registry. */
+  nativeAvailable: boolean
+  /** Own or release the native inline-end placement registration. */
+  setNativeSplit: (active: boolean) => void
+  /** Durable user preferences shared with the Settings tab. */
+  settings?: SettingsScope<ComposerLayoutSettings>
+}
+
+export type ComposerSplitActionProps =
+  PropsRuntime<'conversation.input.overlay'> & ComposerSplitInjected
+
+interface LegacyLayout {
+  root: HTMLElement
+  body: HTMLElement
+  sessionWrapper: HTMLElement
+  chat: HTMLElement
+  composer: HTMLElement
+}
+
+interface OwnerLayout {
+  root: HTMLElement
+  body: HTMLElement
+  composer: HTMLElement
+}
+
+interface BodyRect {
+  top: number
+  right: number
+  contentRight: number
+  height: number
+  width: number
+}
+
+interface MenuAnchor {
+  top: number
+  left: number
+}
+
+function widthForPreset(preset: ComposerLayoutSettings['defaultWidthPreset'], bodyWidth: number): number {
+  const fraction = preset === 'narrow' ? 0.28 : preset === 'wide' ? 0.46 : 0.36
+  return clampWidth(bodyWidth * fraction, bodyWidth)
+}
+
+function clampWidth(width: number, bodyWidth: number): number {
+  return Math.max(MIN_COMPOSER_WIDTH, Math.min(width, Math.max(MIN_COMPOSER_WIDTH, bodyWidth - MIN_CHAT_WIDTH)))
+}
+
+function findOwner(control: HTMLElement): OwnerLayout | null {
+  const root = control.closest<HTMLElement>('[data-phase]')
+  const composer = control.closest<HTMLElement>('[data-composer-seat]')
+  const body = composer?.parentElement
+  if (root === null || composer === null || !(body instanceof HTMLElement)) return null
+  return { root, body, composer }
+}
+
+function findLegacyLayout(control: HTMLElement): LegacyLayout | null {
+  const root = control.closest<HTMLElement>('[data-phase]')
+  if (root === null) return null
+  const body = root.querySelector<HTMLElement>(
+    ':scope > [data-conversation-scroll], :scope > [data-dsh-composer-split-body]',
+  )
+  if (body === null) return null
+  const sessionWrapper = body.querySelector<HTMLElement>(':scope > [data-slot="conversation.session"]')
+  const chat = sessionWrapper?.firstElementChild
+  const composer = body.querySelector<HTMLElement>(':scope > [data-composer-seat]')
+  if (sessionWrapper === null || !(chat instanceof HTMLElement) || composer === null) return null
+  return { root, body, sessionWrapper, chat, composer }
+}
+
+function installLegacyLayout(layout: LegacyLayout): () => void {
+  const { root, body, chat, composer } = layout
+  const initialScrollTop = body.scrollTop
+  root.dataset.dshComposerSplitActive = 'true'
+  body.dataset.dshComposerSplitBody = ''
+  composer.dataset.dshComposerSplitPane = ''
+  body.removeAttribute('data-conversation-scroll')
+  chat.setAttribute('data-conversation-scroll', '')
+  chat.dataset.dshComposerSplitChat = ''
+  body.scrollTop = 0
+  chat.scrollTop = initialScrollTop
+
+  return () => {
+    const chatScrollTop = chat.scrollTop
+    delete root.dataset.dshComposerSplitActive
+    root.style.removeProperty('--dsh-composer-split-width')
+    delete body.dataset.dshComposerSplitBody
+    delete composer.dataset.dshComposerSplitPane
+    delete chat.dataset.dshComposerSplitChat
+    chat.removeAttribute('data-conversation-scroll')
+    body.setAttribute('data-conversation-scroll', '')
+    body.scrollTop = chatScrollTop
+  }
+}
+
+function rectOf(body: HTMLElement): BodyRect {
+  const rect = body.getBoundingClientRect()
+  const contentRight = body.clientWidth > 0 ? rect.left + body.clientWidth : rect.right
+  return { top: rect.top, right: rect.right, contentRight, height: rect.height, width: rect.width }
+}
+
+/** Placement menu plus the reversible legacy split adapter. */
+const fallbackSnapshot = { status: 'unavailable' as const, value: undefined, base: undefined, user: undefined, revision: undefined, writable: false, mode: 'memory' as const }
+const fallbackSettings: SettingsScope<ComposerLayoutSettings> = {
+  getSnapshot: () => fallbackSnapshot,
+  subscribe: () => () => {},
+  set: async () => {},
+  unset: async () => {},
+}
+
+export function ComposerSplitAction({ nativeAvailable, setNativeSplit, settings, sessionId }: ComposerSplitActionProps) {
+  const effectiveSettings = settings ?? fallbackSettings
+  const settingsSnapshot = useSyncExternalStore(
+    effectiveSettings.subscribe.bind(effectiveSettings),
+    effectiveSettings.getSnapshot.bind(effectiveSettings),
+  )
+  const localPreferences = readLocalSettings()
+  const preferences = {
+    ...COMPOSER_LAYOUT_DEFAULTS,
+    ...(settingsSnapshot.value ?? {}),
+    ...localPreferences,
+  }
+  const controlRef = useRef<HTMLDivElement>(null)
+  const toolbarRef = useRef<HTMLDivElement>(null)
+  const edgeTriggerRef = useRef<HTMLButtonElement>(null)
+  const separatorRef = useRef<HTMLDivElement>(null)
+  const ownerRef = useRef<OwnerLayout | null>(null)
+  const sessionLayoutRef = useRef<ComposerSessionLayout>(readSessionLayout(sessionId))
+  const sessionIdRef = useRef(sessionId)
+  const widthOverrideRef = useRef(sessionLayoutRef.current.width !== undefined)
+  const sessionChangedRef = useRef(false)
+  const legacyRef = useRef<LegacyLayout | null>(null)
+  const widthDragRef = useRef<{ x: number; width: number; moved: boolean } | null>(null)
+  const appliedPresetRef = useRef<ComposerLayoutSettings['defaultWidthPreset'] | null>(null)
+  const [split, setSplit] = useState(false)
+  const [composerWidth, setComposerWidth] = useState(DEFAULT_WIDTH)
+  const [bodyRect, setBodyRect] = useState<BodyRect | null>(null)
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [sideMenuAnchor, setSideMenuAnchor] = useState<MenuAnchor | null>(null)
+
+  // ConversationRoot keeps the Composer bar mounted while the active session
+  // changes. Refresh the session-scoped record here instead of letting the
+  // previous conversation's placement and width leak into the new one.
+  useLayoutEffect(() => {
+    if (sessionIdRef.current === sessionId) return
+    sessionIdRef.current = sessionId
+    sessionLayoutRef.current = readSessionLayout(sessionId)
+    widthOverrideRef.current = sessionLayoutRef.current.width !== undefined
+    sessionChangedRef.current = true
+    appliedPresetRef.current = null
+    setMenuOpen(false)
+    setSideMenuAnchor(null)
+    setSplit(false)
+    setComposerWidth(DEFAULT_WIDTH)
+  }, [sessionId])
+
+  useEffect(() => {
+    if (bodyRect === null) return
+    const remembered = sessionLayoutRef.current
+    const placement = preferences.rememberPlacement && remembered.placement !== undefined
+      ? remembered.placement
+      : preferences.defaultPlacement
+    setSplit(placement === 'right')
+
+    if (appliedPresetRef.current === preferences.defaultWidthPreset) return
+    appliedPresetRef.current = preferences.defaultWidthPreset
+    const rememberedWidth = preferences.rememberPlacement
+      ? sessionLayoutRef.current.width
+      : undefined
+    widthOverrideRef.current = rememberedWidth !== undefined
+    if (rememberedWidth !== undefined) {
+      setComposerWidth(clampWidth(rememberedWidth, bodyRect.width))
+    } else {
+      setComposerWidth(widthForPreset(preferences.defaultWidthPreset, bodyRect.width))
+    }
+  }, [bodyRect, preferences])
+
+  useEffect(() => {
+    const root = ownerRef.current?.root
+    if (root === undefined) return
+    root.dataset.dshComposerBottomHandleHoverOnly = String(preferences.bottomHandleHoverOnly)
+    return () => { delete root.dataset.dshComposerBottomHandleHoverOnly }
+  }, [preferences.bottomHandleHoverOnly])
+
+  useEffect(() => {
+    if (!nativeAvailable) return
+    setNativeSplit(split)
+    return () => { setNativeSplit(false) }
+  }, [nativeAvailable, setNativeSplit, split])
+
+  useLayoutEffect(() => {
+    const control = controlRef.current
+    if (control === null) return
+    const owner = findOwner(control)
+    if (owner === null) return
+    ownerRef.current = owner
+    setBodyRect(rectOf(owner.body))
+
+    const observer = new ResizeObserver(() => {
+      const next = rectOf(owner.body)
+      setBodyRect(next)
+      setComposerWidth(current => clampWidth(current, next.width))
+      setMenuOpen(false)
+    })
+    observer.observe(owner.body)
+    return () => {
+      observer.disconnect()
+      ownerRef.current = null
+      delete owner.composer.dataset.dshComposerSideMax
+      setBodyRect(null)
+    }
+  }, [])
+
+  useLayoutEffect(() => {
+    const owner = ownerRef.current
+    if (owner === null) return
+    if (split && (bodyRect?.width ?? 0) > SIDE_LAYOUT_BREAKPOINT) {
+      owner.composer.dataset.dshComposerSideMax = ''
+    } else {
+      delete owner.composer.dataset.dshComposerSideMax
+      if (!split) owner.body.style.removeProperty('--dsh-composer-inline-width')
+    }
+  }, [bodyRect, split])
+
+  useEffect(() => {
+    const root = ownerRef.current?.root
+    if (root === undefined) return
+    const onNativeTrigger = (event: Event): void => {
+      const target = event.target
+      if (!(target instanceof HTMLElement)) return
+      const handle = target.closest<HTMLElement>('[data-composer-width-handle]')
+      if (handle === null) return
+      const rect = handle.getBoundingClientRect()
+      setSideMenuAnchor({
+        top: rect.top + rect.height / 2,
+        left: Math.min(rect.right + 6, window.innerWidth - 6),
+      })
+      setMenuOpen(open => !open)
+    }
+    root.addEventListener('dsh-composer-layout-trigger', onNativeTrigger)
+    return () => { root.removeEventListener('dsh-composer-layout-trigger', onNativeTrigger) }
+  }, [])
+
+  useEffect(() => {
+    if (!menuOpen) return
+    const onPointerDown = (event: globalThis.PointerEvent): void => {
+      const target = event.target
+      if (!(target instanceof Node)) return
+      if (controlRef.current?.contains(target) === true) return
+      if (edgeTriggerRef.current?.contains(target) === true) return
+      if (toolbarRef.current?.contains(target) === true) return
+      if (separatorRef.current?.contains(target) === true) return
+      if (target instanceof Element && target.closest('[data-composer-width-handle]') !== null) return
+      setMenuOpen(false)
+    }
+    const onKeyDown = (event: globalThis.KeyboardEvent): void => {
+      if (event.key === 'Escape') setMenuOpen(false)
+    }
+    document.addEventListener('pointerdown', onPointerDown)
+    document.addEventListener('keydown', onKeyDown)
+    return () => {
+      document.removeEventListener('pointerdown', onPointerDown)
+      document.removeEventListener('keydown', onKeyDown)
+    }
+  }, [menuOpen])
+
+  useLayoutEffect(() => {
+    const control = controlRef.current
+    if (!split || nativeAvailable || control === null) return
+    const layout = findLegacyLayout(control)
+    if (layout === null) return
+    legacyRef.current = layout
+    const dispose = installLegacyLayout(layout)
+    return () => {
+      legacyRef.current = null
+      dispose()
+    }
+  }, [nativeAvailable, split])
+
+  useEffect(() => {
+    const owner = ownerRef.current
+    if (owner === null || !split) return
+    if (sessionChangedRef.current) {
+      sessionChangedRef.current = false
+      return
+    }
+    const next = clampWidth(composerWidth, owner.body.getBoundingClientRect().width)
+    owner.body.style.setProperty('--dsh-composer-inline-width', `${next}px`)
+    const layout = legacyRef.current
+    if (layout !== null) layout.root.style.setProperty('--dsh-composer-split-width', `${next}px`)
+    if (preferences.rememberPlacement && widthOverrideRef.current) {
+      sessionLayoutRef.current = { ...sessionLayoutRef.current, width: next }
+      writeSessionLayout(sessionId, sessionLayoutRef.current)
+    }
+  }, [composerWidth, preferences.defaultWidthPreset, preferences.rememberPlacement, sessionId, split])
+
+  const setDock = (nextSplit: boolean): void => {
+    // Choosing Right from Bottom selects the normal responsive policy. The
+    // force bit is only for reopening a Right layout after its narrow
+    // concession, when the user explicitly opens the edge toolbar again.
+    const forceInline = nextSplit && split
+    setMenuOpen(false)
+    setSplit(nextSplit)
+    ownerRef.current?.root.dispatchEvent(new CustomEvent('dsh-composer-layout-force-inline', {
+      bubbles: true,
+      detail: { force: forceInline },
+    }))
+    if (preferences.rememberPlacement) {
+      const placement = nextSplit ? 'right' : 'bottom'
+      sessionLayoutRef.current = { ...sessionLayoutRef.current, placement }
+      writeSessionLayout(sessionId, sessionLayoutRef.current)
+    }
+  }
+  const resetWidth = useCallback(() => {
+    const width = bodyRect === null ? MIN_COMPOSER_WIDTH : widthForPreset('medium', bodyRect.width)
+    widthOverrideRef.current = true
+    setComposerWidth(width)
+  }, [bodyRect])
+
+  const onWidthPointerDown = useCallback((event: PointerEvent<HTMLDivElement>) => {
+    event.preventDefault()
+    event.currentTarget.setPointerCapture(event.pointerId)
+    widthDragRef.current = { x: event.clientX, width: composerWidth, moved: false }
+  }, [composerWidth])
+
+  const onWidthPointerMove = useCallback((event: PointerEvent<HTMLDivElement>) => {
+    const drag = widthDragRef.current
+    const rect = bodyRect
+    if (drag === null || rect === null || !event.currentTarget.hasPointerCapture(event.pointerId)) return
+    if (Math.abs(event.clientX - drag.x) > 3) drag.moved = true
+    widthOverrideRef.current = true
+    setComposerWidth(clampWidth(drag.width - (event.clientX - drag.x), rect.width))
+  }, [bodyRect])
+
+  const onWidthPointerUp = useCallback((event: PointerEvent<HTMLDivElement>) => {
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId)
+  }, [])
+
+  const openLegacyMenu = (event: MouseEvent<HTMLDivElement>): void => {
+    const drag = widthDragRef.current
+    widthDragRef.current = null
+    if (drag?.moved === true) return
+    const rect = event.currentTarget.getBoundingClientRect()
+    setSideMenuAnchor({
+      top: rect.top + rect.height / 2,
+      left: Math.min(rect.right + 6, window.innerWidth - 6),
+    })
+    setMenuOpen(open => !open)
+  }
+
+  const onWidthKeyDown = useCallback((event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault()
+      event.currentTarget.click()
+      return
+    }
+    if (event.key === 'ArrowLeft') {
+      event.preventDefault()
+      widthOverrideRef.current = true
+      setComposerWidth(value => bodyRect === null ? value : clampWidth(value + 16, bodyRect.width))
+    } else if (event.key === 'ArrowRight') {
+      event.preventDefault()
+      widthOverrideRef.current = true
+      setComposerWidth(value => bodyRect === null ? value : clampWidth(value - 16, bodyRect.width))
+    } else if (event.key === 'Home') {
+      event.preventDefault()
+      resetWidth()
+    }
+  }, [bodyRect, resetWidth])
+
+  const toolbar = (className: string | undefined, style?: { top: number; left: number }) => (
+    <div
+      ref={toolbarRef}
+      className={className}
+      role="toolbar"
+      aria-label="输入区域布局"
+      style={style}
+    >
+      <button
+        type="button"
+        className={css.toolButton}
+        aria-pressed={!split}
+        title="停靠到底部"
+        aria-label="停靠到底部"
+        onClick={() => { setDock(false) }}
+      >
+        <span className={`${css.dockIcon} ${css.dockBottom}`} aria-hidden="true" />
+      </button>
+      <button
+        type="button"
+        className={css.toolButton}
+        aria-pressed={split}
+        title="停靠到右侧"
+        aria-label="停靠到右侧"
+        onClick={() => { setDock(true) }}
+      >
+        <span className={`${css.dockIcon} ${css.dockRight}`} aria-hidden="true" />
+      </button>
+    </div>
+  )
+
+  const legacySeparator = split && !nativeAvailable && bodyRect !== null
+    && bodyRect.width >= MIN_CHAT_WIDTH + MIN_COMPOSER_WIDTH
+    ? createPortal(
+      <div
+        ref={separatorRef}
+        className={css.separator}
+        role="separator"
+        aria-label="调整输入区域宽度；点击打开布局菜单"
+        aria-orientation="vertical"
+        aria-valuemin={MIN_COMPOSER_WIDTH}
+        aria-valuemax={Math.max(MIN_COMPOSER_WIDTH, Math.round(bodyRect.width - MIN_CHAT_WIDTH))}
+        aria-valuenow={Math.round(clampWidth(composerWidth, bodyRect.width))}
+        tabIndex={0}
+        style={{
+          top: bodyRect.top,
+          left: bodyRect.right - clampWidth(composerWidth, bodyRect.width) - HANDLE_HIT_WIDTH / 2,
+          height: bodyRect.height,
+          width: HANDLE_HIT_WIDTH,
+        }}
+        onClick={openLegacyMenu}
+        onDoubleClick={resetWidth}
+        onPointerDown={onWidthPointerDown}
+        onPointerMove={onWidthPointerMove}
+        onPointerUp={onWidthPointerUp}
+        onPointerCancel={() => { widthDragRef.current = null }}
+        onKeyDown={onWidthKeyDown}
+      />,
+      document.body,
+    )
+    : null
+
+  const sideToolbar = split && menuOpen && sideMenuAnchor !== null
+    ? createPortal(toolbar(css.toolbarSide, sideMenuAnchor), document.body)
+    : null
+
+  const bottomTrigger = !split && bodyRect !== null
+    ? (
+      <button
+        ref={edgeTriggerRef}
+        type="button"
+        className={css.edgeTrigger}
+        aria-label="打开输入区域布局菜单"
+        aria-expanded={menuOpen}
+        style={{
+          top: bodyRect.top,
+          left: bodyRect.contentRight - 13,
+          width: HANDLE_HIT_WIDTH,
+          height: bodyRect.height,
+        }}
+        onClick={() => { setMenuOpen(open => !open) }}
+      />
+    )
+    : null
+
+  const bottomToolbar = !split && menuOpen && bodyRect !== null
+    ? toolbar(css.toolbarBottom, {
+      top: bodyRect.top + bodyRect.height / 2,
+      left: bodyRect.contentRight - 19,
+    })
+    : null
+
+  return (
+    <div
+      ref={controlRef}
+      className={css.control}
+      data-dsh-composer-split-mode={split ? 'split' : 'stacked'}
+      data-dsh-composer-split-adapter={nativeAvailable ? 'native' : 'fallback'}
+    >
+      {bottomTrigger}
+      {bottomToolbar}
+      {legacySeparator}
+      {sideToolbar}
+    </div>
+  )
+}

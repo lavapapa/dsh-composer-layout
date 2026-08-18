@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">DSH Composer Layout</title>
+  <desc id="desc">Two rounded composer panels connected by a rising arrow.</desc>
+  <defs>
+    <linearGradient id="bg" x1="64" y1="36" x2="448" y2="476" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#4F6BFF"/>
+      <stop offset="1" stop-color="#2537A8"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="#15236F" flood-opacity=".28"/>
+    </filter>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#bg)"/>
+  <g filter="url(#shadow)" fill="#fff">
+    <rect x="76" y="70" width="178" height="286" rx="30" opacity=".94"/>
+    <rect x="286" y="70" width="150" height="372" rx="30" opacity=".98"/>
+    <rect x="76" y="374" width="178" height="68" rx="30" opacity=".94"/>
+  </g>
+  <path d="M154 406h43c74 0 132-41 160-105" fill="none" stroke="#4F6BFF" stroke-width="18" stroke-linecap="round"/>
+  <path d="m342 290 36 11-9-38" fill="none" stroke="#4F6BFF" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="121" cy="406" r="10" fill="#B9C5FF"/>
+</svg>

@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="840" viewBox="0 0 1200 840">
+  <rect width="1200" height="840" rx="32" fill="#10152a"/>
+  <text x="46" y="32" fill="#f7f8fc" font-family="Arial, sans-serif" font-size="22" font-weight="700">2. Dock it to the right when the prompt grows</text>
+  <text x="46" y="54" fill="#aeb9d3" font-family="Arial, sans-serif" font-size="15">The conversation stays visible while the input gets its own column.</text>
+  <g transform="translate(0 66)">
+  <rect width="1200" height="760" rx="32" fill="#10152a"/>
+  <rect x="36" y="34" width="1128" height="692" rx="24" fill="#f7f8fc"/>
+  <circle cx="70" cy="68" r="7" fill="#ff6b6b"/><circle cx="94" cy="68" r="7" fill="#ffc857"/><circle cx="118" cy="68" r="7" fill="#4fd1a5"/>
+  <rect x="62" y="110" width="206" height="576" rx="18" fill="#eef0f6"/><rect x="86" y="144" width="128" height="14" rx="7" fill="#bcc4d5"/><rect x="86" y="188" width="144" height="42" rx="12" fill="#dce3ff"/>
+  <rect x="300" y="110" width="660" height="576" rx="18" fill="#ffffff"/><rect x="342" y="160" width="360" height="18" rx="9" fill="#c6ccda"/><rect x="342" y="202" width="520" height="14" rx="7" fill="#e2e5ec"/><rect x="342" y="236" width="458" height="14" rx="7" fill="#e2e5ec"/><rect x="342" y="300" width="560" height="15" rx="7" fill="#d4d9e5"/>
+  <rect x="968" y="110" width="172" height="576" rx="18" fill="#edf1ff" stroke="#b7c3ff" stroke-width="3"/><rect x="990" y="154" width="128" height="14" rx="7" fill="#8697e8"/><rect x="990" y="190" width="110" height="50" rx="14" fill="#fff"/><rect x="990" y="266" width="96" height="14" rx="7" fill="#bdc7f6"/><rect x="990" y="300" width="116" height="14" rx="7" fill="#d2d9ff"/>
+  <path d="M944 380h36" stroke="#4f6bff" stroke-width="8" stroke-linecap="round"/><path d="m964 366 16 14-16 14" fill="none" stroke="#4f6bff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</svg>

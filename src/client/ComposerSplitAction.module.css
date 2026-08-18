@@ -1,0 +1,242 @@
+.control {
+  display: contents;
+}
+
+.edgeTrigger {
+  position: fixed;
+  z-index: 20;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  outline: none;
+}
+
+.toolbarBottom,
+.toolbarSide {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-height: 32px;
+  padding: 3px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--dsw-alias-bg-elevated) 94%, transparent);
+  box-shadow: 0 6px 20px rgb(0 0 0 / 22%);
+  pointer-events: auto;
+  backdrop-filter: blur(10px);
+}
+
+.toolbarBottom {
+  position: fixed;
+  z-index: 30;
+  transform: translate(-100%, -50%);
+}
+
+.toolbarSide {
+  position: fixed;
+  z-index: 30;
+  /* The right-side recovery rail sits at the viewport edge. Open the toolbar
+     inward so the restore controls remain clickable instead of rendering
+     beyond the browser's right boundary. */
+  transform: translate(-100%, -50%);
+}
+
+.toolButton {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--dsw-alias-label-secondary);
+  line-height: 1;
+  cursor: pointer;
+}
+
+.toolButton:hover,
+.toolButton:focus-visible,
+.toolButton[aria-pressed='true'] {
+  background: var(--dsw-alias-interactive-bg-hover);
+  color: var(--dsw-alias-state-business-primary);
+  outline: none;
+}
+
+.dockIcon {
+  position: relative;
+  box-sizing: border-box;
+  width: 20px;
+  height: 15px;
+  border: 2px solid currentColor;
+  border-radius: 2px;
+}
+
+.dockIcon::after {
+  content: '';
+  position: absolute;
+  border-radius: 1px;
+  background: currentColor;
+}
+
+.dockBottom::after {
+  right: 1px;
+  bottom: 1px;
+  left: 1px;
+  height: 4px;
+}
+
+.dockRight::after {
+  top: 1px;
+  right: 1px;
+  bottom: 1px;
+  width: 5px;
+}
+
+.separator {
+  position: fixed;
+  z-index: 20;
+  touch-action: none;
+  cursor: col-resize;
+  outline: none;
+}
+
+.edgeTrigger::before,
+.separator::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 4px;
+  width: 2px;
+  height: 44px;
+  border-radius: 2px;
+  background: rgb(255 255 255 / 78%);
+  opacity: 0.58;
+  transform: translateY(-50%);
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 12%), 0 1px 5px rgb(0 0 0 / 20%);
+  transition: opacity 120ms ease, width 120ms ease, left 120ms ease;
+}
+
+.edgeTrigger:hover::before,
+.edgeTrigger:focus-visible::before,
+.edgeTrigger[aria-expanded='true']::before,
+.separator:hover::before,
+.separator:focus-visible::before,
+.separator:active::before {
+  left: 3px;
+  width: 4px;
+  opacity: 1;
+}
+
+/* The fallback divider mirrors native inline-end: its hit rail stays on the
+   boundary while the visible grip sits clearly inside the Composer. */
+.separator::before {
+  left: 12px;
+  opacity: 0;
+}
+
+.separator:hover::before,
+.separator:focus-visible::before,
+.separator:active::before {
+  left: 11px;
+}
+
+:global([data-dsh-composer-bottom-handle-hover-only='true']) .edgeTrigger::before {
+  opacity: 0;
+}
+
+:global([data-dsh-composer-bottom-handle-hover-only='true']) .edgeTrigger:hover::before,
+:global([data-dsh-composer-bottom-handle-hover-only='true']) .edgeTrigger:focus-visible::before,
+:global([data-dsh-composer-bottom-handle-hover-only='true']) .edgeTrigger[aria-expanded='true']::before {
+  opacity: 1;
+}
+
+:global([data-phase='hero']) .edgeTrigger,
+:global([data-phase='hero']) .toolbarBottom,
+:global([data-phase='hero']) .separator {
+  display: none;
+}
+
+:global([data-dsh-composer-side-max] [data-composer-stack]),
+:global([data-dsh-composer-side-max] [data-composer-bar]),
+:global([data-dsh-composer-side-max] [data-composer-card]),
+:global([data-dsh-composer-side-max] [data-input-scroll]) {
+  flex: 1 1 0;
+  min-height: 0;
+}
+
+:global([data-dsh-composer-split-active='true']) {
+  container-type: inline-size;
+}
+
+:global([data-dsh-composer-split-active='true'] > [data-dsh-composer-split-body]) {
+  display: grid !important;
+  grid-template-columns: minmax(420px, 1fr) minmax(360px, var(--dsh-composer-split-width, 420px));
+  grid-template-rows: minmax(0, 1fr);
+  min-height: 0;
+  overflow: hidden !important;
+  scrollbar-gutter: auto !important;
+}
+
+:global([data-dsh-composer-split-body] [data-dsh-composer-split-chat]) {
+  flex: 1 1 0 !important;
+  min-width: 0;
+  min-height: 0 !important;
+  height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+}
+
+:global([data-dsh-composer-split-body] > [data-dsh-composer-split-pane]) {
+  position: relative !important;
+  bottom: auto !important;
+  z-index: 7;
+  box-sizing: border-box;
+  justify-content: flex-end;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  container-type: size;
+  overflow-x: hidden;
+  overflow-y: auto;
+  border-left: 0;
+  background: var(--dsw-alias-bg-base) !important;
+}
+
+:global([data-dsh-composer-split-pane]) {
+  --dsh-chat-content-width: 100%;
+  --dsh-composer-card-max-width: 100%;
+  --dsh-composer-side-clearance: 12px;
+  --dsh-composer-text-max-height: max(96px, calc(100cqh - 104px));
+}
+
+:global([data-dsh-composer-split-pane] [data-input-scroll]) {
+  min-height: clamp(96px, 18cqh, 168px);
+}
+
+@container (max-width: 680px) {
+  :global([data-dsh-composer-split-active='true'] > [data-dsh-composer-split-body]) {
+    display: flex !important;
+    flex-direction: column;
+    overflow-y: auto !important;
+  }
+
+  :global([data-dsh-composer-split-body] [data-dsh-composer-split-chat]) {
+    flex: 1 0 auto !important;
+    height: auto;
+    overflow: visible;
+  }
+
+  :global([data-dsh-composer-split-body] > [data-dsh-composer-split-pane]) {
+    position: sticky !important;
+    bottom: 0 !important;
+    flex: none;
+    height: auto;
+    max-height: 52%;
+    padding-top: 0;
+    border-top: 1px solid var(--dsw-alias-border-l2);
+    border-left: 0;
+  }
+}

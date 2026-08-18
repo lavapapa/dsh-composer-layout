@@ -1,0 +1,4 @@
+# Add the Composer Layout bundle's host row to the profile.
+- insert:
+    - id: ui-composer-layout
+      name: 'dsh-composer-layout'
