@@ -9,9 +9,9 @@
 
 Optional [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) Web plugin that lets the Composer stay at the bottom or dock in a right-side column. The chat and Composer keep their own space, while the normal DSH model, permission, quota, session, and tool behavior remains intact.
 
-![A real DSH Web session beside a tall right-side Composer](assets/screenshots/right-side-composer.png)
+![A real DSH Web session beside a tall right-side Composer](assets/screenshots/hero-en.png)
 
-_A clean demonstration profile reviewing an architecture migration plan. The conversation is sample content, not a user session._
+_A clean demonstration profile: a detailed multi-tenant platform architecture proposal on the left, then a long, concrete revision brief in the right-side Composer. The conversation is sample content, not a user session._
 
 ## Why a side-by-side Composer?
 

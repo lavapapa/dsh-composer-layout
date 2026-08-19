@@ -10,7 +10,8 @@ const required = [
   'lib/invariant.js',
   'cordis.patch.yml',
   'assets/icon.svg',
-  'assets/screenshots/right-side-composer.png',
+  'assets/screenshots/hero-en.png',
+  'assets/screenshots/hero-zh.png',
   'README.md',
 ]
 

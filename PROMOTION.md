@@ -16,8 +16,8 @@ The product is for the moment a user stops composing a short reply and starts wo
 
 The README and repository preview use a real DSH Web capture rather than a concept illustration:
 
-- `assets/screenshots/right-side-composer.png` is a 1280×720 screenshot from a clean demonstration profile. Its architecture-migration review is written solely for the public material; it contains no user session content.
-- `assets/social-preview.png` is a 1280×640 social-preview image derived from that real capture, ready for the GitHub repository social-preview setting.
+- `assets/screenshots/hero-en.png` and `assets/screenshots/hero-zh.png` are 1280×720 screenshots from clean demonstration profiles. Both show a detailed multi-tenant platform architecture proposal beside a long revision instruction; all content was written solely for public material.
+- `assets/social-preview.png` is a 1280×640 social-preview image derived from the English capture, ready for the GitHub repository social-preview setting.
 
 Do not describe the layout as making every conversation larger or faster. Its concrete benefit is keeping a referenced conversation visible beside a long input. Use examples such as long instructions, revisions against earlier answers, code and log excerpts, and multi-step tasks.
 
