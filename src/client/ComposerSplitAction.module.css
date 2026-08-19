@@ -95,8 +95,12 @@
 }
 
 .separator {
-  position: fixed;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  inset-inline-start: -5px;
   z-index: 20;
+  width: 10px;
   touch-action: none;
   cursor: col-resize;
   outline: none;
@@ -168,6 +172,7 @@
 
 :global([data-dsh-composer-split-active='true']) {
   container-type: inline-size;
+  container-name: dsh-composer-split-root;
 }
 
 :global([data-dsh-composer-split-active='true'] > [data-dsh-composer-split-body]) {
@@ -216,7 +221,7 @@
   min-height: clamp(96px, 18cqh, 168px);
 }
 
-@container (max-width: 680px) {
+@container dsh-composer-split-root (max-width: 680px) {
   :global([data-dsh-composer-split-active='true'] > [data-dsh-composer-split-body]) {
     display: flex !important;
     flex-direction: column;

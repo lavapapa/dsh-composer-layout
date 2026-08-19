@@ -39,16 +39,16 @@ The plugin is presentation-only: it does not add model-facing tools, change prom
 Once published, npm installs use the same prebuilt package as the GitHub release:
 
 ```sh
-dsh plugin --profile web add dsh-composer-layout@0.1.1
+dsh plugin --profile web add dsh-composer-layout@0.1.2
 dsh web --profile web
 ```
 
 ### Install directly from GitHub
 
-DSH installs the plugin bundle directly from a GitHub repository; pinning the command to `v0.1.1` makes the installed source explicit and repeatable.
+DSH installs the plugin bundle directly from a GitHub repository; pinning the command to `v0.1.2` makes the installed source explicit and repeatable.
 
 ```sh
-dsh plugin --profile web add "github:lavapapa/dsh-composer-layout#v0.1.1"
+dsh plugin --profile web add "github:lavapapa/dsh-composer-layout#v0.1.2"
 dsh web --profile web
 ```
 
@@ -65,7 +65,7 @@ dsh --profile web --dump-config
 The GitHub Release also contains a `.tgz` package for an offline or inspected install:
 
 ```sh
-dsh plugin --profile web add /path/to/dsh-composer-layout-0.1.1.tgz
+dsh plugin --profile web add /path/to/dsh-composer-layout-0.1.2.tgz
 dsh web --profile web
 ```
 
@@ -73,8 +73,8 @@ For a later version, remove the installed package, then add the new npm version,
 
 ```sh
 dsh plugin --profile web remove dsh-composer-layout
-dsh plugin --profile web add dsh-composer-layout@0.1.1
-# or: dsh plugin --profile web add "github:lavapapa/dsh-composer-layout#v0.1.1"
+dsh plugin --profile web add dsh-composer-layout@0.1.2
+# or: dsh plugin --profile web add "github:lavapapa/dsh-composer-layout#v0.1.2"
 dsh web --profile web
 ```
 

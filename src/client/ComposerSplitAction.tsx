@@ -52,7 +52,6 @@ interface OwnerLayout {
 
 interface BodyRect {
   top: number
-  right: number
   contentRight: number
   height: number
   width: number
@@ -122,7 +121,7 @@ function installLegacyLayout(layout: LegacyLayout): () => void {
 function rectOf(body: HTMLElement): BodyRect {
   const rect = body.getBoundingClientRect()
   const contentRight = body.clientWidth > 0 ? rect.left + body.clientWidth : rect.right
-  return { top: rect.top, right: rect.right, contentRight, height: rect.height, width: rect.width }
+  return { top: rect.top, contentRight, height: rect.height, width: rect.width }
 }
 
 /** Placement menu plus the reversible legacy split adapter. */
@@ -426,7 +425,7 @@ export function ComposerSplitAction({ nativeAvailable, setNativeSplit, settings,
   )
 
   const legacySeparator = split && !nativeAvailable && bodyRect !== null
-    && bodyRect.width >= MIN_CHAT_WIDTH + MIN_COMPOSER_WIDTH
+    && bodyRect.width >= MIN_CHAT_WIDTH + MIN_COMPOSER_WIDTH && ownerRef.current !== null
     ? createPortal(
       <div
         ref={separatorRef}
@@ -438,12 +437,6 @@ export function ComposerSplitAction({ nativeAvailable, setNativeSplit, settings,
         aria-valuemax={Math.max(MIN_COMPOSER_WIDTH, Math.round(bodyRect.width - MIN_CHAT_WIDTH))}
         aria-valuenow={Math.round(clampWidth(composerWidth, bodyRect.width))}
         tabIndex={0}
-        style={{
-          top: bodyRect.top,
-          left: bodyRect.right - clampWidth(composerWidth, bodyRect.width) - HANDLE_HIT_WIDTH / 2,
-          height: bodyRect.height,
-          width: HANDLE_HIT_WIDTH,
-        }}
         onClick={openLegacyMenu}
         onDoubleClick={resetWidth}
         onPointerDown={onWidthPointerDown}
@@ -452,7 +445,7 @@ export function ComposerSplitAction({ nativeAvailable, setNativeSplit, settings,
         onPointerCancel={() => { widthDragRef.current = null }}
         onKeyDown={onWidthKeyDown}
       />,
-      document.body,
+      ownerRef.current.composer,
     )
     : null
 
