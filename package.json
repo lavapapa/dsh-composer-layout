@@ -23,6 +23,8 @@
     "lib/*.d.ts",
     "cordis.patch.yml",
     "assets/icon.svg",
+    "assets/hero-en.png",
+    "assets/hero-zh.png",
     "assets/screenshots/hero-en.png",
     "assets/screenshots/hero-zh.png",
     "README.md",

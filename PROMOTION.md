@@ -8,14 +8,15 @@ The product is for the moment a user stops composing a short reply and starts wo
 
 **English one-liner:**
 
-> Read here. Compose there. Dock DSH Composer to the right when a long prompt needs the conversation to stay in view.
+> Keep the answer in view while you write. Dock Composer to the right so the answer and your growing draft can stay side by side.
 
 **中文一句话：**
 
-> 阅读留在这里，输入放到旁边：长输入需要不断对照对话时，把 DSH Composer 停靠到右侧。
+> 一边读，一边想，一边写：把 Composer 停到右侧，让回答和正在成形的提示词始终并排可见。
 
-The README and repository preview use a real DSH Web capture rather than a concept illustration:
+The README opens with a bilingual layout-comparison Hero, then follows it with a real DSH Web capture:
 
+- `assets/hero-en.png` and `assets/hero-zh.png` explain the problem directly: a growing bottom draft hides the answer it references, while a docked Composer keeps answer and draft side by side.
 - `assets/screenshots/hero-en.png` and `assets/screenshots/hero-zh.png` are 1280×720 screenshots from clean demonstration profiles. Both show a detailed multi-tenant platform architecture proposal beside a long revision instruction; all content was written solely for public material.
 - `assets/social-preview.png` is a 1280×640 social-preview image derived from the English capture, ready for the GitHub repository social-preview setting.
 
