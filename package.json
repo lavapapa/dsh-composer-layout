@@ -23,8 +23,7 @@
     "lib/*.d.ts",
     "cordis.patch.yml",
     "assets/icon.svg",
-    "assets/hero.svg",
-    "assets/demo.gif",
+    "assets/screenshots/right-side-composer.png",
     "README.md",
     "README.zh.md",
     "LICENSE"

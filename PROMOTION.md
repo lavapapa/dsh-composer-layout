@@ -14,11 +14,10 @@ The product is for the moment a user stops composing a short reply and starts wo
 
 > 阅读留在这里，输入放到旁边：长输入需要不断对照对话时，把 DSH Composer 停靠到右侧。
 
-The README uses two intentionally different assets:
+The README and repository preview use a real DSH Web capture rather than a concept illustration:
 
-- `assets/hero.svg` is the static overview for GitHub previews and link cards. It explains the reason for the layout without pretending to be a screenshot of a user session.
-- `assets/social-preview.png` is the 1280×640 PNG derived from that overview, ready for the GitHub repository social-preview setting.
-- `assets/demo.gif` is a four-step concept animation: bottom Composer, docking transition, side-by-side work, and Composer popups in the narrow right column.
+- `assets/screenshots/right-side-composer.png` is a 1280×720 screenshot from a clean demonstration profile. Its architecture-migration review is written solely for the public material; it contains no user session content.
+- `assets/social-preview.png` is a 1280×640 social-preview image derived from that real capture, ready for the GitHub repository social-preview setting.
 
 Do not describe the layout as making every conversation larger or faster. Its concrete benefit is keeping a referenced conversation visible beside a long input. Use examples such as long instructions, revisions against earlier answers, code and log excerpts, and multi-step tasks.
 

@@ -9,11 +9,9 @@
 
 这是一个可选的 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) Web 插件，让 Composer 保持在底部，或停靠到右侧栏。聊天区与 Composer 各自保留空间；模型、权限、额度、会话和工具行为继续使用 DSH 原有实现。
 
-![DSH 对话区与右侧高输入栏](assets/hero.svg)
+![真实 DSH Web 会话与右侧高输入栏](assets/screenshots/right-side-composer.png)
 
-![Composer Layout 动图](assets/demo.gif)
-
-这段动图展示了操作思路：先从熟悉的底部输入栏开始；输入变长时停靠到右侧；随后在右栏中使用菜单，不丢失 Composer 本身。实际界面仍运行在 DSH Web 页面中。
+_截图来自独立的干净演示 profile：内容是一段架构迁移评审示例，并非任何用户会话。_
 
 ## 为什么要把 Composer 放在右侧？
 
