@@ -40,16 +40,16 @@
 发布到 npm 后，可直接安装与 GitHub Release 相同的预构建包：
 
 ```sh
-dsh plugin --profile web add dsh-composer-layout@0.1.4
+dsh plugin --profile web add dsh-composer-layout@0.1.5
 dsh web --profile web
 ```
 
 ### 直接从 GitHub 安装
 
-DSH 可以直接从 GitHub 仓库安装插件 bundle；命令固定到 `v0.1.4`，因此每次安装的来源和版本都清楚可追溯。
+DSH 可以直接从 GitHub 仓库安装插件 bundle；命令固定到 `v0.1.5`，因此每次安装的来源和版本都清楚可追溯。
 
 ```sh
-dsh plugin --profile web add "github:lavapapa/dsh-composer-layout#v0.1.4"
+dsh plugin --profile web add "github:lavapapa/dsh-composer-layout#v0.1.5"
 dsh web --profile web
 ```
 
@@ -66,7 +66,7 @@ dsh --profile web --dump-config
 GitHub Release 也会提供 `.tgz` 安装包，适合无法直接访问 GitHub、或希望先检查包内容的情况：
 
 ```sh
-dsh plugin --profile web add /path/to/dsh-composer-layout-0.1.4.tgz
+dsh plugin --profile web add /path/to/dsh-composer-layout-0.1.5.tgz
 dsh web --profile web
 ```
 
@@ -74,12 +74,12 @@ dsh web --profile web
 
 ```sh
 dsh plugin --profile web remove dsh-composer-layout
-dsh plugin --profile web add dsh-composer-layout@0.1.4
-# 或：dsh plugin --profile web add "github:lavapapa/dsh-composer-layout#v0.1.4"
+dsh plugin --profile web add dsh-composer-layout@0.1.5
+# 或：dsh plugin --profile web add "github:lavapapa/dsh-composer-layout#v0.1.5"
 dsh web --profile web
 ```
 
-插件需要 DSH Web 的 `0.1.0-rc.8` 依赖版本；0.1.4 已在 DSH 源码提交 `141eb6f` 的干净 checkout 中完成构建和检查。
+插件需要 DSH Web 的 `0.1.0-rc.8` 依赖版本；0.1.5 已在 DSH 源码提交 `141eb6f` 的干净 checkout 中完成构建和检查。
 
 ## 开发
 

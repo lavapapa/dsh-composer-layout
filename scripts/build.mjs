@@ -24,7 +24,12 @@ const cssModules = {
         cssModules: { pattern: '[hash]_[local]' },
         minify: true,
       })
-      const classes = Object.fromEntries(Object.entries(output.exports ?? {}).map(([name, entry]) => [name, entry.name]))
+      // lightningcss 不保证导出对象的枚举顺序；固定排序使发布包可重复构建。
+      const classes = Object.fromEntries(
+        Object.entries(output.exports ?? {})
+          .sort(([left], [right]) => left.localeCompare(right))
+          .map(([name, entry]) => [name, entry.name]),
+      )
       const tagId = `${clientId}/${args.path.split('/').pop()}`
       return {
         contents: [

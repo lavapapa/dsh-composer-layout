@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.5 — 2026-08-20
+
+- Make the generated browser bundle repeatable by sorting CSS-module exports before serializing them. This leaves the layout behavior unchanged while ensuring that the release tag and npm package can be rebuilt byte-for-byte.
+
 ## 0.1.4 — 2026-08-20
 
 - Keep a visible layout rail when a right-side Composer temporarily stacks in a narrow window; the Right-side choice stays disabled until both columns fit, then the remembered right-side preference returns automatically.
