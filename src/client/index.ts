@@ -1,6 +1,7 @@
 /** Standalone Chat/Composer split-layout browser plugin. */
 import type { ClientContext } from '@deepseek-ai/dsh-client-runtime/client'
 import type { SettingsScope } from '@deepseek-ai/dsh-client-runtime/client'
+import type {} from '@deepseek-ai/dsh-client-ui-input-trigger/client'
 import {
   ComposerSplitAction,
   type ComposerSplitInjected,
@@ -20,7 +21,7 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
 }
 
 /** Required client services. Layout ownership stays inside this standalone plugin. */
-export const inject = ['slots']
+export const inject = ['slots', 'sessions', 'inputTriggers']
 
 /** Register the Composer-card hover controls. */
 const fallbackSettings: SettingsScope<ComposerLayoutSettings> = {
@@ -47,18 +48,25 @@ export function apply(ctx: ClientContext): void {
       inject: (): { settings: SettingsScope<ComposerLayoutSettings> } => ({ settings }),
     }, ComposerLayoutSettingsTab))
   }
-  ctx.slots.inject(
-    'conversation.input.overlay',
-    () => {
-      const disposeEntry = ctx.slots.register({
-        name: 'conversation.input.overlay',
-        id: 'composer-layout-controls',
-        order: 30,
-        inject: (): ComposerSplitInjected => ({
-          settings,
-        }),
-      }, ComposerSplitAction)
-      return disposeEntry
-    },
-  )
+  ctx.inject(['slots', 'sessions', 'inputTriggers'], (scope: ClientContext) => {
+    const { sessions, inputTriggers } = scope
+    scope.slots.inject(
+      'conversation.input.overlay',
+      () => {
+        const disposeEntry = scope.slots.register({
+          name: 'conversation.input.overlay',
+          id: 'composer-layout-controls',
+          order: 30,
+          inject: (sessionId): ComposerSplitInjected => ({
+            settings,
+            dismissInputTrigger: () => {
+              const session = sessions.scope(sessionId)
+              if (session !== undefined) inputTriggers.sessionOf(session).dismiss()
+            },
+          }),
+        }, ComposerSplitAction)
+        return disposeEntry
+      },
+    )
+  })
 }

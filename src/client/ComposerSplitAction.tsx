@@ -12,21 +12,20 @@ import {
   readLocalSettings, readSessionLayout, writeSessionLayout,
   type ComposerSessionLayout,
 } from './settings-storage.ts'
+import {
+  MIN_CHAT_WIDTH, MIN_COMPOSER_WIDTH, SIDE_LAYOUT_BREAKPOINT,
+  canUseSideLayout, clampComposerWidth,
+} from './layout-policy.js'
 import css from './ComposerSplitAction.module.css'
 
 const DEFAULT_WIDTH = 420
-const MIN_COMPOSER_WIDTH = 360
-const MIN_CHAT_WIDTH = 420
-// Keep the side layout through DSH's 1024px sidebar transition. A 320px Chat
-// column remains readable beside the 360px minimum Composer; conceding earlier
-// would make the Composer jump when the native sidebar expands.
-const MIN_CHAT_LAYOUT_WIDTH = 320
-const SIDE_LAYOUT_BREAKPOINT = MIN_COMPOSER_WIDTH + MIN_CHAT_LAYOUT_WIDTH
 const HANDLE_HIT_WIDTH = 10
 
 export interface ComposerSplitInjected {
   /** Durable user preferences shared with the Settings tab. */
   settings?: SettingsScope<ComposerLayoutSettings>
+  /** Close the current session's slash/reference candidate list. */
+  dismissInputTrigger?: () => void
 }
 
 export type ComposerSplitActionProps =
@@ -60,11 +59,7 @@ interface MenuAnchor {
 
 function widthForPreset(preset: ComposerLayoutSettings['defaultWidthPreset'], bodyWidth: number): number {
   const fraction = preset === 'narrow' ? 0.28 : preset === 'wide' ? 0.46 : 0.36
-  return clampWidth(bodyWidth * fraction, bodyWidth)
-}
-
-function clampWidth(width: number, bodyWidth: number): number {
-  return Math.max(MIN_COMPOSER_WIDTH, Math.min(width, Math.max(MIN_COMPOSER_WIDTH, bodyWidth - MIN_CHAT_WIDTH)))
+  return clampComposerWidth(bodyWidth * fraction, bodyWidth)
 }
 
 function findOwner(control: HTMLElement): OwnerLayout | null {
@@ -129,7 +124,7 @@ const fallbackSettings: SettingsScope<ComposerLayoutSettings> = {
   unset: async () => {},
 }
 
-export function ComposerSplitAction({ settings, sessionId }: ComposerSplitActionProps) {
+export function ComposerSplitAction({ settings, sessionId, dismissInputTrigger }: ComposerSplitActionProps) {
   const effectiveSettings = settings ?? fallbackSettings
   const settingsSnapshot = useSyncExternalStore(
     effectiveSettings.subscribe.bind(effectiveSettings),
@@ -190,7 +185,7 @@ export function ComposerSplitAction({ settings, sessionId }: ComposerSplitAction
       : undefined
     widthOverrideRef.current = rememberedWidth !== undefined
     if (rememberedWidth !== undefined) {
-      setComposerWidth(clampWidth(rememberedWidth, bodyRect.width))
+      setComposerWidth(clampComposerWidth(rememberedWidth, bodyRect.width))
     } else {
       setComposerWidth(widthForPreset(preferences.defaultWidthPreset, bodyRect.width))
     }
@@ -214,7 +209,7 @@ export function ComposerSplitAction({ settings, sessionId }: ComposerSplitAction
     const observer = new ResizeObserver(() => {
       const next = rectOf(owner.body)
       setBodyRect(next)
-      setComposerWidth(current => clampWidth(current, next.width))
+      setComposerWidth(current => clampComposerWidth(current, next.width))
       setMenuOpen(false)
     })
     observer.observe(owner.body)
@@ -229,7 +224,7 @@ export function ComposerSplitAction({ settings, sessionId }: ComposerSplitAction
   useLayoutEffect(() => {
     const owner = ownerRef.current
     if (owner === null) return
-    if (split && (bodyRect?.width ?? 0) > SIDE_LAYOUT_BREAKPOINT) {
+    if (split && canUseSideLayout(bodyRect?.width ?? 0)) {
       owner.composer.dataset.dshComposerSideMax = ''
     } else {
       delete owner.composer.dataset.dshComposerSideMax
@@ -237,24 +232,23 @@ export function ComposerSplitAction({ settings, sessionId }: ComposerSplitAction
     }
   }, [bodyRect, split])
 
+  // In a side-by-side Composer, every competing popup must first dismiss the
+  // slash/reference candidate list. The listener deliberately lives only in
+  // the side layout so the normal bottom Composer retains DSH's own behavior.
   useEffect(() => {
-    const root = ownerRef.current?.root
-    if (root === undefined) return
-    const onNativeTrigger = (event: Event): void => {
+    const composer = ownerRef.current?.composer
+    if (!split || composer === undefined || dismissInputTrigger === undefined) return
+    const onPopupTriggerPointerDown = (event: globalThis.PointerEvent): void => {
       const target = event.target
-      if (!(target instanceof HTMLElement)) return
-      const handle = target.closest<HTMLElement>('[data-composer-width-handle]')
-      if (handle === null) return
-      const rect = handle.getBoundingClientRect()
-      setSideMenuAnchor({
-        top: rect.top + rect.height / 2,
-        left: Math.min(rect.right + 6, window.innerWidth - 6),
-      })
-      setMenuOpen(open => !open)
+      if (!(target instanceof Element)) return
+      if (target.closest('[role="listbox"]') !== null) return
+      const trigger = target.closest<HTMLElement>('button, [role="button"]')
+      if (trigger === null || trigger.getAttribute('aria-haspopup') === 'listbox') return
+      dismissInputTrigger()
     }
-    root.addEventListener('dsh-composer-layout-trigger', onNativeTrigger)
-    return () => { root.removeEventListener('dsh-composer-layout-trigger', onNativeTrigger) }
-  }, [])
+    composer.addEventListener('pointerdown', onPopupTriggerPointerDown, true)
+    return () => { composer.removeEventListener('pointerdown', onPopupTriggerPointerDown, true) }
+  }, [dismissInputTrigger, split])
 
   useEffect(() => {
     if (!menuOpen) return
@@ -299,7 +293,7 @@ export function ComposerSplitAction({ settings, sessionId }: ComposerSplitAction
       sessionChangedRef.current = false
       return
     }
-    const next = clampWidth(composerWidth, owner.body.getBoundingClientRect().width)
+    const next = clampComposerWidth(composerWidth, owner.body.getBoundingClientRect().width)
     owner.body.style.setProperty('--dsh-composer-inline-width', `${next}px`)
     const layout = legacyRef.current
     if (layout !== null) layout.root.style.setProperty('--dsh-composer-split-width', `${next}px`)
@@ -310,16 +304,8 @@ export function ComposerSplitAction({ settings, sessionId }: ComposerSplitAction
   }, [composerWidth, preferences.defaultWidthPreset, preferences.rememberPlacement, sessionId, split])
 
   const setDock = (nextSplit: boolean): void => {
-    // Choosing Right from Bottom selects the normal responsive policy. The
-    // force bit is only for reopening a Right layout after its narrow
-    // concession, when the user explicitly opens the edge toolbar again.
-    const forceInline = nextSplit && split
     setMenuOpen(false)
     setSplit(nextSplit)
-    ownerRef.current?.root.dispatchEvent(new CustomEvent('dsh-composer-layout-force-inline', {
-      bubbles: true,
-      detail: { force: forceInline },
-    }))
     if (preferences.rememberPlacement) {
       const placement = nextSplit ? 'right' : 'bottom'
       sessionLayoutRef.current = { ...sessionLayoutRef.current, placement }
@@ -344,7 +330,7 @@ export function ComposerSplitAction({ settings, sessionId }: ComposerSplitAction
     if (drag === null || rect === null || !event.currentTarget.hasPointerCapture(event.pointerId)) return
     if (Math.abs(event.clientX - drag.x) > 3) drag.moved = true
     widthOverrideRef.current = true
-    setComposerWidth(clampWidth(drag.width - (event.clientX - drag.x), rect.width))
+    setComposerWidth(clampComposerWidth(drag.width - (event.clientX - drag.x), rect.width))
   }, [bodyRect])
 
   const onWidthPointerUp = useCallback((event: PointerEvent<HTMLDivElement>) => {
@@ -372,17 +358,18 @@ export function ComposerSplitAction({ settings, sessionId }: ComposerSplitAction
     if (event.key === 'ArrowLeft') {
       event.preventDefault()
       widthOverrideRef.current = true
-      setComposerWidth(value => bodyRect === null ? value : clampWidth(value + 16, bodyRect.width))
+      setComposerWidth(value => bodyRect === null ? value : clampComposerWidth(value + 16, bodyRect.width))
     } else if (event.key === 'ArrowRight') {
       event.preventDefault()
       widthOverrideRef.current = true
-      setComposerWidth(value => bodyRect === null ? value : clampWidth(value - 16, bodyRect.width))
+      setComposerWidth(value => bodyRect === null ? value : clampComposerWidth(value - 16, bodyRect.width))
     } else if (event.key === 'Home') {
       event.preventDefault()
       resetWidth()
     }
   }, [bodyRect, resetWidth])
 
+  const sideLayoutAvailable = canUseSideLayout(bodyRect?.width ?? 0)
   const toolbar = (className: string | undefined, style?: { top: number; left: number }) => (
     <div
       ref={toolbarRef}
@@ -407,6 +394,7 @@ export function ComposerSplitAction({ settings, sessionId }: ComposerSplitAction
         aria-pressed={split}
         title="停靠到右侧"
         aria-label="停靠到右侧"
+        disabled={!sideLayoutAvailable}
         onClick={() => { setDock(true) }}
       >
         <span className={`${css.dockIcon} ${css.dockRight}`} aria-hidden="true" />
@@ -414,8 +402,7 @@ export function ComposerSplitAction({ settings, sessionId }: ComposerSplitAction
     </div>
   )
 
-  const separator = split && bodyRect !== null
-    && bodyRect.width >= MIN_CHAT_WIDTH + MIN_COMPOSER_WIDTH && ownerRef.current !== null
+  const separator = split && bodyRect !== null && sideLayoutAvailable && ownerRef.current !== null
     ? createPortal(
       <div
         ref={separatorRef}
@@ -425,7 +412,7 @@ export function ComposerSplitAction({ settings, sessionId }: ComposerSplitAction
         aria-orientation="vertical"
         aria-valuemin={MIN_COMPOSER_WIDTH}
         aria-valuemax={Math.max(MIN_COMPOSER_WIDTH, Math.round(bodyRect.width - MIN_CHAT_WIDTH))}
-        aria-valuenow={Math.round(clampWidth(composerWidth, bodyRect.width))}
+        aria-valuenow={Math.round(clampComposerWidth(composerWidth, bodyRect.width))}
         tabIndex={0}
         onClick={openLegacyMenu}
         onDoubleClick={resetWidth}
@@ -441,6 +428,37 @@ export function ComposerSplitAction({ settings, sessionId }: ComposerSplitAction
 
   const sideToolbar = split && menuOpen && sideMenuAnchor !== null
     ? createPortal(toolbar(css.toolbarSide, sideMenuAnchor), document.body)
+    : null
+
+  const openSideToolbar = (event: MouseEvent<HTMLButtonElement>): void => {
+    const rect = event.currentTarget.getBoundingClientRect()
+    setSideMenuAnchor({
+      top: rect.top + rect.height / 2,
+      left: Math.min(rect.right + 6, window.innerWidth - 6),
+    })
+    setMenuOpen(open => !open)
+  }
+
+  // A right-layout preference survives the temporary stacked layout below the
+  // breakpoint. The recovery rail keeps that state legible and lets the user
+  // choose Bottom; Right stays disabled until two usable columns fit again.
+  const recoveryTrigger = split && bodyRect !== null && !sideLayoutAvailable
+    ? (
+      <button
+        ref={edgeTriggerRef}
+        type="button"
+        className={css.edgeTrigger}
+        aria-label="打开输入区域布局菜单；窗口过窄，已暂时停靠到底部"
+        aria-expanded={menuOpen}
+        style={{
+          top: bodyRect.top,
+          left: bodyRect.contentRight - 13,
+          width: HANDLE_HIT_WIDTH,
+          height: bodyRect.height,
+        }}
+        onClick={openSideToolbar}
+      />
+    )
     : null
 
   const bottomTrigger = !split && bodyRect !== null
@@ -479,6 +497,7 @@ export function ComposerSplitAction({ settings, sessionId }: ComposerSplitAction
       {bottomTrigger}
       {bottomToolbar}
       {separator}
+      {recoveryTrigger}
       {sideToolbar}
     </div>
   )

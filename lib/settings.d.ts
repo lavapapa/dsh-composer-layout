@@ -15,4 +15,3 @@ export interface ComposerLayoutSettings {
     defaultWidthPreset: ComposerLayoutWidthPreset;
 }
 export declare const ComposerLayoutSettingsSchema: z<ComposerLayoutSettings>;
-//# sourceMappingURL=settings.d.ts.map

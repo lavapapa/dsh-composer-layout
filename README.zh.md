@@ -28,7 +28,8 @@
 - 在“**设置 → 插件 → Composer 布局**”中选择底部或右侧布局。
 - 提供可见的停靠手柄；右侧布局下，分隔条也可以调整 Composer 栏宽度。
 - 打开“记住当前会话布局”后，分别保存每个会话的布局，以及手动调整过的右侧栏宽度。
-- 在窄窗口中重新安排斜杠命令、模型／权限／上下文菜单和额度面板的位置。
+- 窗口装不下两个可用栏位时，暂时回到上下布局，同时保留布局手柄；宽度恢复后，记住的右侧布局会自动回来。
+- 右侧布局中，打开模型、权限、上下文等 Composer 面板前会收起斜杠／引用候选，避免浮层互相遮挡。
 
 本插件只负责界面布局，不新增面向模型的工具，不改变提示词或额度统计。
 
@@ -39,16 +40,16 @@
 发布到 npm 后，可直接安装与 GitHub Release 相同的预构建包：
 
 ```sh
-dsh plugin --profile web add dsh-composer-layout@0.1.3
+dsh plugin --profile web add dsh-composer-layout@0.1.4
 dsh web --profile web
 ```
 
 ### 直接从 GitHub 安装
 
-DSH 可以直接从 GitHub 仓库安装插件 bundle；命令固定到 `v0.1.3`，因此每次安装的来源和版本都清楚可追溯。
+DSH 可以直接从 GitHub 仓库安装插件 bundle；命令固定到 `v0.1.4`，因此每次安装的来源和版本都清楚可追溯。
 
 ```sh
-dsh plugin --profile web add "github:lavapapa/dsh-composer-layout#v0.1.3"
+dsh plugin --profile web add "github:lavapapa/dsh-composer-layout#v0.1.4"
 dsh web --profile web
 ```
 
@@ -65,7 +66,7 @@ dsh --profile web --dump-config
 GitHub Release 也会提供 `.tgz` 安装包，适合无法直接访问 GitHub、或希望先检查包内容的情况：
 
 ```sh
-dsh plugin --profile web add /path/to/dsh-composer-layout-0.1.3.tgz
+dsh plugin --profile web add /path/to/dsh-composer-layout-0.1.4.tgz
 dsh web --profile web
 ```
 
@@ -73,16 +74,16 @@ dsh web --profile web
 
 ```sh
 dsh plugin --profile web remove dsh-composer-layout
-dsh plugin --profile web add dsh-composer-layout@0.1.3
-# 或：dsh plugin --profile web add "github:lavapapa/dsh-composer-layout#v0.1.3"
+dsh plugin --profile web add dsh-composer-layout@0.1.4
+# 或：dsh plugin --profile web add "github:lavapapa/dsh-composer-layout#v0.1.4"
 dsh web --profile web
 ```
 
-插件需要 DSH Web 的 `@deepseek-ai/dsh-*` 依赖处于 `0.1.x` 预发布系列；发布说明会记录实际测试所用的源码提交。
+插件需要 DSH Web 的 `0.1.0-rc.8` 依赖版本；0.1.4 已在 DSH 源码提交 `141eb6f` 的干净 checkout 中完成构建和检查。
 
 ## 开发
 
-仓库有意提交了 GitHub 安装需要的 `lib/` 构建产物。源码位于 `src/`；实现源头在 DSH workspace 中，这里保留对应代码，方便在不打开 monorepo 的情况下审阅一次发布内容。涉及 DSH 内部接口的改动，应先在匹配的 DSH checkout 中完成测试，再发布新版本。
+仓库有意提交了 GitHub 安装需要的 `lib/` 构建产物，插件实现由本仓库 `src/` 自己维护。发布前运行 `pnpm typecheck`、`pnpm build` 和 `pnpm test`，并在匹配版本的干净 DSH checkout 中做一次实际检查。
 
 ## 相关链接
 

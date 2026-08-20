@@ -28,7 +28,8 @@ Docking Composer to the right gives reading and writing separate vertical space.
 - Bottom and right-side Composer placement from **Settings → Plugins → Composer Layout**.
 - A visible docking handle; in the right layout it also resizes the Composer pane.
 - Per-session placement and manually resized right-pane width when “Remember this session layout” is enabled.
-- Narrow-window positioning for slash commands, model/access/context menus, and quota panels.
+- When the window cannot fit both columns, temporarily stack the Composer while retaining a layout rail; the remembered right-side layout returns automatically once width is available again.
+- In the right-side layout, close slash/reference candidates before another Composer popup opens, so model, access, and context panels do not overlap them.
 
 The plugin is presentation-only: it does not add model-facing tools, change prompts, or alter token accounting.
 
@@ -39,16 +40,16 @@ The plugin is presentation-only: it does not add model-facing tools, change prom
 Once published, npm installs use the same prebuilt package as the GitHub release:
 
 ```sh
-dsh plugin --profile web add dsh-composer-layout@0.1.3
+dsh plugin --profile web add dsh-composer-layout@0.1.4
 dsh web --profile web
 ```
 
 ### Install directly from GitHub
 
-DSH installs the plugin bundle directly from a GitHub repository; pinning the command to `v0.1.3` makes the installed source explicit and repeatable.
+DSH installs the plugin bundle directly from a GitHub repository; pinning the command to `v0.1.4` makes the installed source explicit and repeatable.
 
 ```sh
-dsh plugin --profile web add "github:lavapapa/dsh-composer-layout#v0.1.3"
+dsh plugin --profile web add "github:lavapapa/dsh-composer-layout#v0.1.4"
 dsh web --profile web
 ```
 
@@ -65,7 +66,7 @@ dsh --profile web --dump-config
 The GitHub Release also contains a `.tgz` package for an offline or inspected install:
 
 ```sh
-dsh plugin --profile web add /path/to/dsh-composer-layout-0.1.3.tgz
+dsh plugin --profile web add /path/to/dsh-composer-layout-0.1.4.tgz
 dsh web --profile web
 ```
 
@@ -73,16 +74,16 @@ For a later version, remove the installed package, then add the new npm version,
 
 ```sh
 dsh plugin --profile web remove dsh-composer-layout
-dsh plugin --profile web add dsh-composer-layout@0.1.3
-# or: dsh plugin --profile web add "github:lavapapa/dsh-composer-layout#v0.1.3"
+dsh plugin --profile web add dsh-composer-layout@0.1.4
+# or: dsh plugin --profile web add "github:lavapapa/dsh-composer-layout#v0.1.4"
 dsh web --profile web
 ```
 
-The plugin requires a DSH Web build whose `@deepseek-ai/dsh-*` packages are in the `0.1.x` prerelease line; the tested source checkout is recorded in the release notes.
+The plugin requires the `0.1.0-rc.8` DSH Web package line. Version 0.1.4 was built and checked against DSH source commit `141eb6f`.
 
 ## Development
 
-The repository intentionally commits the generated `lib/` artifacts used by GitHub installs. The source is under `src/`; the source-of-record implementation lives in the DSH workspace and is kept here so a release can be reviewed without opening the monorepo. Changes that touch DSH internals should be tested against the matching DSH checkout before publishing a new release.
+The repository intentionally commits the generated `lib/` artifacts used by GitHub installs. The plugin owns its implementation under `src/`; run `pnpm typecheck`, `pnpm build`, and `pnpm test` before publishing. Each release is also checked in a clean matching DSH checkout.
 
 ## Related links
 

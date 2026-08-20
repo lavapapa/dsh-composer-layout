@@ -177,7 +177,7 @@
 
 :global([data-dsh-composer-split-active='true'] > [data-dsh-composer-split-body]) {
   display: grid !important;
-  grid-template-columns: minmax(420px, 1fr) minmax(360px, var(--dsh-composer-split-width, 420px));
+  grid-template-columns: minmax(320px, 1fr) minmax(360px, var(--dsh-composer-split-width, 420px));
   grid-template-rows: minmax(0, 1fr);
   min-height: 0;
   overflow: hidden !important;
