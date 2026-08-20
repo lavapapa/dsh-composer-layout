@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { spawn, spawnSync } from 'node:child_process'
 import { once } from 'node:events'
-import { mkdtemp, rm } from 'node:fs/promises'
+import { mkdtemp, readdir, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -45,7 +45,16 @@ async function waitForServer(url, output) {
 
 let server
 try {
-  const installed = dsh(['plugin', '--profile', 'web', 'add', root])
+  const packed = spawnSync('pnpm', ['pack', '--pack-destination', home], {
+    cwd: root,
+    encoding: 'utf8',
+    env: environment,
+  })
+  assert.equal(packed.status, 0, `Could not pack the plugin.\n${commandOutput(packed)}`)
+  const tarball = (await readdir(home)).find(file => file.endsWith('.tgz'))
+  assert.ok(tarball, 'pnpm pack did not create a plugin tarball')
+
+  const installed = dsh(['plugin', '--profile', 'web', 'add', join(home, tarball)])
   assert.equal(installed.status, 0, `Could not install ${dshPackage}.\n${commandOutput(installed)}`)
 
   const config = dsh(['--profile', 'web', '--dump-config'])
