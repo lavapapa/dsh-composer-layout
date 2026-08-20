@@ -1,6 +1,6 @@
 {
   "name": "dsh-composer-layout",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Keep long answers and detailed prompts side by side with a dockable DSH Composer.",
   "keywords": [
     "deepseek-harness",

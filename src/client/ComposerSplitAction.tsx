@@ -25,10 +25,6 @@ const SIDE_LAYOUT_BREAKPOINT = MIN_COMPOSER_WIDTH + MIN_CHAT_LAYOUT_WIDTH
 const HANDLE_HIT_WIDTH = 10
 
 export interface ComposerSplitInjected {
-  /** Whether the running DSH exposes the native placement registry. */
-  nativeAvailable: boolean
-  /** Own or release the native inline-end placement registration. */
-  setNativeSplit: (active: boolean) => void
   /** Durable user preferences shared with the Settings tab. */
   settings?: SettingsScope<ComposerLayoutSettings>
 }
@@ -124,7 +120,7 @@ function rectOf(body: HTMLElement): BodyRect {
   return { top: rect.top, contentRight, height: rect.height, width: rect.width }
 }
 
-/** Placement menu plus the reversible legacy split adapter. */
+/** Placement menu plus the plugin-owned, reversible split adapter. */
 const fallbackSnapshot = { status: 'unavailable' as const, value: undefined, base: undefined, user: undefined, revision: undefined, writable: false, mode: 'memory' as const }
 const fallbackSettings: SettingsScope<ComposerLayoutSettings> = {
   getSnapshot: () => fallbackSnapshot,
@@ -133,7 +129,7 @@ const fallbackSettings: SettingsScope<ComposerLayoutSettings> = {
   unset: async () => {},
 }
 
-export function ComposerSplitAction({ nativeAvailable, setNativeSplit, settings, sessionId }: ComposerSplitActionProps) {
+export function ComposerSplitAction({ settings, sessionId }: ComposerSplitActionProps) {
   const effectiveSettings = settings ?? fallbackSettings
   const settingsSnapshot = useSyncExternalStore(
     effectiveSettings.subscribe.bind(effectiveSettings),
@@ -206,12 +202,6 @@ export function ComposerSplitAction({ nativeAvailable, setNativeSplit, settings,
     root.dataset.dshComposerBottomHandleHoverOnly = String(preferences.bottomHandleHoverOnly)
     return () => { delete root.dataset.dshComposerBottomHandleHoverOnly }
   }, [preferences.bottomHandleHoverOnly])
-
-  useEffect(() => {
-    if (!nativeAvailable) return
-    setNativeSplit(split)
-    return () => { setNativeSplit(false) }
-  }, [nativeAvailable, setNativeSplit, split])
 
   useLayoutEffect(() => {
     const control = controlRef.current
@@ -291,7 +281,7 @@ export function ComposerSplitAction({ nativeAvailable, setNativeSplit, settings,
 
   useLayoutEffect(() => {
     const control = controlRef.current
-    if (!split || nativeAvailable || control === null) return
+    if (!split || control === null) return
     const layout = findLegacyLayout(control)
     if (layout === null) return
     legacyRef.current = layout
@@ -300,7 +290,7 @@ export function ComposerSplitAction({ nativeAvailable, setNativeSplit, settings,
       legacyRef.current = null
       dispose()
     }
-  }, [nativeAvailable, split])
+  }, [split])
 
   useEffect(() => {
     const owner = ownerRef.current
@@ -424,7 +414,7 @@ export function ComposerSplitAction({ nativeAvailable, setNativeSplit, settings,
     </div>
   )
 
-  const legacySeparator = split && !nativeAvailable && bodyRect !== null
+  const separator = split && bodyRect !== null
     && bodyRect.width >= MIN_CHAT_WIDTH + MIN_COMPOSER_WIDTH && ownerRef.current !== null
     ? createPortal(
       <div
@@ -484,11 +474,11 @@ export function ComposerSplitAction({ nativeAvailable, setNativeSplit, settings,
       ref={controlRef}
       className={css.control}
       data-dsh-composer-split-mode={split ? 'split' : 'stacked'}
-      data-dsh-composer-split-adapter={nativeAvailable ? 'native' : 'fallback'}
+      data-dsh-composer-split-adapter="plugin"
     >
       {bottomTrigger}
       {bottomToolbar}
-      {legacySeparator}
+      {separator}
       {sideToolbar}
     </div>
   )

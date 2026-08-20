@@ -1,4 +1,4 @@
-/** Optional Chat/Composer split-layout browser plugin. */
+/** Standalone Chat/Composer split-layout browser plugin. */
 import type { ClientContext } from '@deepseek-ai/dsh-client-runtime/client'
 import type { SettingsScope } from '@deepseek-ai/dsh-client-runtime/client'
 import {
@@ -19,11 +19,7 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
   }
 }
 
-interface NativeConversationLayout {
-  register(spec: { composerPlacement: 'inline-end' }): () => void
-}
-
-/** Required client services. The native layout service stays optional for old DSH builds. */
+/** Required client services. Layout ownership stays inside this standalone plugin. */
 export const inject = ['slots']
 
 /** Register the Composer-card hover controls. */
@@ -54,31 +50,15 @@ export function apply(ctx: ClientContext): void {
   ctx.slots.inject(
     'conversation.input.overlay',
     () => {
-      let releasePlacement: (() => void) | undefined
-      const nativeLayout = (): NativeConversationLayout | undefined =>
-        ctx.get('conversationLayout') as NativeConversationLayout | undefined
-      const setNativeSplit = (active: boolean): void => {
-        releasePlacement?.()
-        releasePlacement = undefined
-        const native = nativeLayout()
-        if (active && native !== undefined) {
-          releasePlacement = native.register({ composerPlacement: 'inline-end' })
-        }
-      }
       const disposeEntry = ctx.slots.register({
         name: 'conversation.input.overlay',
         id: 'composer-layout-controls',
         order: 30,
         inject: (): ComposerSplitInjected => ({
-          nativeAvailable: nativeLayout() !== undefined,
-          setNativeSplit,
           settings,
         }),
       }, ComposerSplitAction)
-      return () => {
-        disposeEntry()
-        setNativeSplit(false)
-      }
+      return disposeEntry
     },
   )
 }
