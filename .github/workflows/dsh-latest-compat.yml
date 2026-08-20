@@ -1,29 +1,23 @@
-name: Verify plugin package
+name: Check latest DSH compatibility
 
 on:
-  push:
-  pull_request:
+  schedule:
+    - cron: '17 3 * * 1'
   workflow_dispatch:
+    inputs:
+      dsh-version:
+        description: DSH npm version or dist-tag to check
+        required: false
+        default: latest
 
 permissions:
   contents: read
 
 jobs:
-  package:
+  web-plugin:
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-      - run: corepack enable
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm typecheck
-      - run: pnpm build
-      - run: pnpm test
-
-  dsh-compatibility:
-    runs-on: ubuntu-latest
+    env:
+      DSH_VERSION: ${{ inputs.dsh-version || 'latest' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
