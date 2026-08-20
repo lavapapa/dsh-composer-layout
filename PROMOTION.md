@@ -38,13 +38,13 @@ Suggested title:
 
 Suggested body:
 
-> `dsh-composer-layout` adds an optional Web-only Composer layout: keep the input at the bottom or dock it in a right-side column. It remembers placement per session, keeps the right pane resizable, and positions Composer popups so they are not clipped in a narrow window. It does not change prompts, models, token accounting, or tools.
+> `dsh-composer-layout` adds an optional Web-only Composer layout: keep the input at the bottom or dock it in a right-side column. It remembers placement per session, keeps the right pane resizable, and temporarily stacks it when the window cannot fit both columns. As soon as space returns, the saved right-side preference returns too. It does not change prompts, models, token accounting, or tools.
 >
-> Install: `dsh plugin --profile web add github:lavapapa/dsh-composer-layout#v0.1.0`
+> Install: `dsh plugin --profile web add dsh-composer-layout@0.1.5`
 >
 > README: https://github.com/lavapapa/dsh-composer-layout
 >
-> Tested against the `deepseek-ai/deepseek-harness` source checkout at commit `47f9438`. Feedback on narrow layouts and compatibility with newer DSH Web releases is welcome.
+> Tested against DSH Web `0.1.0-rc.8` at source commit `141eb6f`. GitHub Actions also checks the pinned release on every change and checks the latest DSH npm release weekly. Feedback on narrow layouts and future DSH Web releases is welcome.
 
 ## Evidence to keep with the launch
 
