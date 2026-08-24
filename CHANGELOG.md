@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.6 — 2026-08-24
+
+- Repair the right-side Composer for the current DSH Web layout: the complete input chain now receives the pane height, so a long draft remains inside the Composer and scrolls independently from Chat.
+- Keep slash, reference, and popup menus inside the right pane after that expansion, including in short browser windows.
+
 ## 0.1.5 — 2026-08-20
 
 - Make the generated browser bundle repeatable by sorting CSS-module exports before serializing them. This leaves the layout behavior unchanged while ensuring that the release tag and npm package can be rebuilt byte-for-byte.

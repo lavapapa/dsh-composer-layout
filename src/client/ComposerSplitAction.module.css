@@ -162,8 +162,12 @@
   display: none;
 }
 
-:global([data-dsh-composer-side-max] [data-composer-stack]),
-:global([data-dsh-composer-side-max] [data-composer-bar]),
+/* The current DSH InputBar wraps its card in an unmarked flex column. Giving
+   the card flex growth without first sizing that wrapper collapses the card to
+   its padding, then lets the textarea scrollport overflow out of the pane.
+   Target every real layout ancestor in the Composer chain, rather than a
+   private class or a data attribute DSH does not publish. */
+:global([data-dsh-composer-side-max] :has([data-composer-card])),
 :global([data-dsh-composer-side-max] [data-composer-card]),
 :global([data-dsh-composer-side-max] [data-input-scroll]) {
   flex: 1 1 0;
@@ -219,6 +223,24 @@
 
 :global([data-dsh-composer-split-pane] [data-input-scroll]) {
   min-height: clamp(96px, 18cqh, 168px);
+}
+
+/* DSH anchors slash and reference candidates to the top edge of the Composer
+   card. In the side layout that card fills the pane, so the native
+   bottom-anchored dropdown would have almost no room above it. Move only an
+   open candidate/menu anchor to the control row: candidates then grow upward
+   within the right pane, as they do above the compact bottom Composer. */
+:global([data-dsh-composer-split-pane] [data-composer-card] > :has(:is([role='listbox'], [role='menu']))) {
+  inset: auto 0 80px;
+  height: 0;
+}
+
+/* The host clamps against the full viewport, but a side-pane menu must also
+   stay below the session header. The pane is a size container, so its own
+   height gives the correct ceiling when a short browser window leaves less
+   room than the normal 320px menu cap. */
+:global([data-dsh-composer-split-pane] :is([role='listbox'], [role='menu'])) {
+  max-height: min(320px, calc(100cqh - 128px)) !important;
 }
 
 @container dsh-composer-split-root (max-width: 680px) {
