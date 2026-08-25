@@ -3,6 +3,7 @@
 **English** · [简体中文](README.zh.md)
 
 [![Release](https://img.shields.io/github/v/tag/lavapapa/dsh-composer-layout?label=release)](https://github.com/lavapapa/dsh-composer-layout/tags)
+[![npm](https://img.shields.io/npm/v/dsh-composer-layout?label=npm)](https://www.npmjs.com/package/dsh-composer-layout)
 [![Verify plugin package](https://github.com/lavapapa/dsh-composer-layout/actions/workflows/verify.yml/badge.svg)](https://github.com/lavapapa/dsh-composer-layout/actions/workflows/verify.yml)
 [![Check latest DSH compatibility](https://github.com/lavapapa/dsh-composer-layout/actions/workflows/dsh-latest-compat.yml/badge.svg)](https://github.com/lavapapa/dsh-composer-layout/actions/workflows/dsh-latest-compat.yml)
 [![License](https://img.shields.io/github/license/lavapapa/dsh-composer-layout)](LICENSE)
@@ -41,7 +42,7 @@ The plugin is presentation-only: it does not add model-facing tools, change prom
 
 ### Install from npm
 
-Once published, npm installs use the same prebuilt package as the GitHub release:
+npm installs use the same prebuilt package as the GitHub release:
 
 ```sh
 dsh plugin --profile web add dsh-composer-layout@0.1.7

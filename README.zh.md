@@ -3,6 +3,7 @@
 [English](README.md) · **简体中文**
 
 [![发布标签](https://img.shields.io/github/v/tag/lavapapa/dsh-composer-layout?label=release)](https://github.com/lavapapa/dsh-composer-layout/tags)
+[![npm](https://img.shields.io/npm/v/dsh-composer-layout?label=npm)](https://www.npmjs.com/package/dsh-composer-layout)
 [![插件验证](https://github.com/lavapapa/dsh-composer-layout/actions/workflows/verify.yml/badge.svg)](https://github.com/lavapapa/dsh-composer-layout/actions/workflows/verify.yml)
 [![DSH 兼容性](https://github.com/lavapapa/dsh-composer-layout/actions/workflows/dsh-latest-compat.yml/badge.svg)](https://github.com/lavapapa/dsh-composer-layout/actions/workflows/dsh-latest-compat.yml)
 [![许可证](https://img.shields.io/github/license/lavapapa/dsh-composer-layout)](LICENSE)
@@ -41,7 +42,7 @@
 
 ### 从 npm 安装
 
-发布到 npm 后，可直接安装与 GitHub Release 相同的预构建包：
+可直接安装与 GitHub Release 相同的预构建包：
 
 ```sh
 dsh plugin --profile web add dsh-composer-layout@0.1.7
