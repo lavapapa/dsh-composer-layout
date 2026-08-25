@@ -42,10 +42,10 @@ The plugin is presentation-only: it does not add model-facing tools, change prom
 
 ### Install from npm
 
-npm installs use the same prebuilt package as the GitHub release:
+The npm package already contains the prebuilt plugin bundle:
 
 ```sh
-dsh plugin --profile web add dsh-composer-layout@0.1.7
+dsh plugin --profile web add dsh-composer-layout@latest
 dsh web --profile web
 ```
 
@@ -66,25 +66,17 @@ The repository ships the prebuilt host and browser artifacts used by this comman
 dsh --profile web --dump-config
 ```
 
-### Release asset and updates
+### Update
 
-The GitHub Release also contains a `.tgz` package for an offline or inspected install:
-
-```sh
-dsh plugin --profile web add /path/to/dsh-composer-layout-0.1.7.tgz
-dsh web --profile web
-```
-
-For a later version, remove the installed package, then add the new npm version, tag, or release asset:
+To move an existing installation to the current npm release:
 
 ```sh
 dsh plugin --profile web remove dsh-composer-layout
-dsh plugin --profile web add dsh-composer-layout@0.1.7
-# or: dsh plugin --profile web add "github:lavapapa/dsh-composer-layout#v0.1.7"
+dsh plugin --profile web add dsh-composer-layout@latest
 dsh web --profile web
 ```
 
-The plugin requires the `0.1.0-rc.8` DSH Web package line. Version 0.1.7 was built and checked against DSH Web `0.1.1-rc.2`.
+The DSH Web package range supported by the plugin is declared in [`package.json`](package.json). The [DSH compatibility workflow](https://github.com/lavapapa/dsh-composer-layout/actions/workflows/dsh-latest-compat.yml) regularly checks the plugin against the current DSH release.
 
 ## Development
 

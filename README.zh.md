@@ -42,10 +42,10 @@
 
 ### 从 npm 安装
 
-可直接安装与 GitHub Release 相同的预构建包：
+npm 包已经包含预构建好的插件 bundle：
 
 ```sh
-dsh plugin --profile web add dsh-composer-layout@0.1.7
+dsh plugin --profile web add dsh-composer-layout@latest
 dsh web --profile web
 ```
 
@@ -66,25 +66,17 @@ dsh web --profile web
 dsh --profile web --dump-config
 ```
 
-### Release 安装包与更新
+### 更新
 
-GitHub Release 也会提供 `.tgz` 安装包，适合无法直接访问 GitHub、或希望先检查包内容的情况：
-
-```sh
-dsh plugin --profile web add /path/to/dsh-composer-layout-0.1.7.tgz
-dsh web --profile web
-```
-
-更新到后续版本时，先移除当前插件，再改用新的 npm 版本、tag 或 Release 安装包：
+需要更新到当前 npm 版本时：
 
 ```sh
 dsh plugin --profile web remove dsh-composer-layout
-dsh plugin --profile web add dsh-composer-layout@0.1.7
-# 或：dsh plugin --profile web add "github:lavapapa/dsh-composer-layout#v0.1.7"
+dsh plugin --profile web add dsh-composer-layout@latest
 dsh web --profile web
 ```
 
-插件需要 DSH Web 的 `0.1.0-rc.8` 依赖版本；0.1.7 已在 DSH Web `0.1.1-rc.2` 中完成构建和界面检查。
+插件支持的 DSH Web 包版本范围以 [`package.json`](package.json) 为准；[DSH 兼容性工作流](https://github.com/lavapapa/dsh-composer-layout/actions/workflows/dsh-latest-compat.yml) 会定期用当前 DSH 版本检查插件。
 
 ## 开发
 

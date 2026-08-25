@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.8 — 2026-08-25
+
+- Correct the npm and GitHub installation guidance so both README versions describe the published package accurately.
+
 ## 0.1.7 — 2026-08-25
 
 - Restore the right-side Composer's blank-area focus behavior: clicking below a short draft now focuses the editor without changing controls, menus, or the native bottom layout.
