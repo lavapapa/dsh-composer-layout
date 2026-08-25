@@ -112,6 +112,19 @@ describe('ComposerSplitAction', () => {
     expect(document.activeElement).toBe(input)
   })
 
+  it('records an explicit dock choice for the current session', async () => {
+    measuredWidth = 1_000
+    fixture({ settings: settings('bottom') })
+    await screen.findByRole('button', { name: '打开输入区域布局菜单' })
+    fireEvent.click(screen.getByRole('button', { name: '打开输入区域布局菜单' }))
+    await screen.findByRole('toolbar', { name: '输入区域布局' })
+    fireEvent.click(screen.getByRole('button', { name: '停靠到右侧' }))
+    await screen.findByRole('separator', { name: /调整输入区域宽度/ })
+    expect(JSON.parse(localStorage.getItem('dsh.composer-split.session-layouts') ?? '{}')).toEqual({
+      'session-a': { placement: 'right' },
+    })
+  })
+
   it('leaves the native bottom layout alone', async () => {
     measuredWidth = 1_000
     const dismiss = vi.fn()

@@ -1,12 +1,15 @@
 # Contributing
 
-This repository is the release mirror for the Composer Layout bundle. Keep runtime changes in the matching DSH workspace first, run that workspace's focused GUI and browser checks, then copy the reviewed `lib/` artifact and update the README and changelog here.
+This repository owns the Composer Layout plugin and its release bundle. Treat [the release contract](docs/RELEASE_CHECKS.md) as the source of truth for the behavior that must remain intact on every update.
 
 Before opening a pull request, run:
 
 ```sh
-node scripts/verify-package.mjs
-npm pack --dry-run
+pnpm install --frozen-lockfile
+pnpm typecheck
+pnpm build
+pnpm test
+pnpm test:dsh-compat
 ```
 
-Please include the DSH commit, package version, and the exact install path used for a manual smoke test. Keep descriptions factual: the plugin changes Composer presentation and must not claim model, token, or security behavior it does not implement.
+For a release, complete the real-browser checks in the contract against the target DSH version and record the tested version in the changelog. Keep descriptions factual: the plugin changes Composer presentation and must not claim model, token, or security behavior it does not implement.

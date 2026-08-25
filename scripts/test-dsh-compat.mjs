@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url'
 import { chromium } from 'playwright'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
-const dshVersion = '0.1.1-rc.2'
+const dshVersion = process.env.DSH_VERSION ?? '0.1.1-rc.2'
 const dshPackage = `@deepseek-ai/dsh@${dshVersion}`
 const port = Number(process.env.DSH_COMPAT_PORT ?? 3813)
 const home = await mkdtemp(join(tmpdir(), 'dsh-composer-layout-compat-'))
