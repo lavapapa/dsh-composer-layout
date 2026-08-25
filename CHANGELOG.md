@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.7 — 2026-08-25
+
+- Restore the right-side Composer's blank-area focus behavior: clicking below a short draft now focuses the editor without changing controls, menus, or the native bottom layout.
+
 ## 0.1.6 — 2026-08-24
 
 - Repair the right-side Composer for the current DSH Web layout: the complete input chain now receives the pane height, so a long draft remains inside the Composer and scrolls independently from Chat.

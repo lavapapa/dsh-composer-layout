@@ -58,6 +58,9 @@ function fixture(props: Partial<ComposerSplitActionProps> = {}) {
         <div data-slot="conversation.session"><div data-testid="chat" /></div>
         <div data-composer-seat="">
           <div data-composer-card="">
+            <div data-input-scroll="">
+              <textarea aria-label="给智能体发消息" />
+            </div>
             <button type="button" aria-label="模型" aria-haspopup="menu">模型</button>
             <button type="button" aria-label="命令" aria-haspopup="listbox">命令</button>
             <ComposerSplitAction sessionId="session-a" settings={settings('right')} {...props} />
@@ -98,6 +101,17 @@ describe('ComposerSplitAction', () => {
     expect(dismiss).toHaveBeenCalledTimes(1)
   })
 
+  it('focuses the draft when its right-side blank scroll area is clicked', async () => {
+    measuredWidth = 1_000
+    fixture()
+    await screen.findByRole('separator', { name: /调整输入区域宽度/ })
+    const input = screen.getByRole('textbox', { name: '给智能体发消息' })
+    const blankArea = input.parentElement
+    if (blankArea === null) throw new Error('fixture input scroll area is missing')
+    fireEvent.pointerDown(blankArea, { button: 0 })
+    expect(document.activeElement).toBe(input)
+  })
+
   it('leaves the native bottom layout alone', async () => {
     measuredWidth = 1_000
     const dismiss = vi.fn()
@@ -105,5 +119,10 @@ describe('ComposerSplitAction', () => {
     await screen.findByRole('button', { name: '打开输入区域布局菜单' })
     fireEvent.pointerDown(screen.getByRole('button', { name: '模型' }))
     expect(dismiss).not.toHaveBeenCalled()
+    const input = screen.getByRole('textbox', { name: '给智能体发消息' })
+    const blankArea = input.parentElement
+    if (blankArea === null) throw new Error('fixture input scroll area is missing')
+    fireEvent.pointerDown(blankArea, { button: 0 })
+    expect(document.activeElement).not.toBe(input)
   })
 })

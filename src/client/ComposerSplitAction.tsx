@@ -250,6 +250,32 @@ export function ComposerSplitAction({ settings, sessionId, dismissInputTrigger }
     return () => { composer.removeEventListener('pointerdown', onPopupTriggerPointerDown, true) }
   }, [dismissInputTrigger, split])
 
+  // The right pane deliberately gives the draft scrollport the remaining
+  // vertical space. DSH's textarea itself still grows only with its content,
+  // which leaves a large blank area below a short draft. Treat that blank area
+  // as part of the editor, without intercepting controls, menus, or text
+  // selection inside the actual textarea.
+  useEffect(() => {
+    const composer = ownerRef.current?.composer
+    if (!split || composer === undefined) return
+    const onBlankDraftPointerDown = (event: globalThis.PointerEvent): void => {
+      if (event.button !== 0 && event.button !== undefined) return
+      const target = event.target
+      if (!(target instanceof Element)) return
+      const scrollport = target.closest<HTMLElement>('[data-input-scroll]')
+      if (scrollport === null || !composer.contains(scrollport)) return
+      if (target.closest('textarea, input, [contenteditable="true"], button, a, [role="button"], [role="listbox"], [role="menu"]') !== null) return
+      const editor = composer.querySelector<HTMLElement>(
+        'textarea:not([disabled]), input:not([disabled]), [contenteditable="true"], [role="textbox"]',
+      )
+      if (editor === null) return
+      event.preventDefault()
+      editor.focus({ preventScroll: true })
+    }
+    composer.addEventListener('pointerdown', onBlankDraftPointerDown)
+    return () => { composer.removeEventListener('pointerdown', onBlankDraftPointerDown) }
+  }, [split])
+
   useEffect(() => {
     if (!menuOpen) return
     const onPointerDown = (event: globalThis.PointerEvent): void => {
