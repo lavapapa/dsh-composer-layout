@@ -101,12 +101,14 @@ describe('ComposerSplitAction', () => {
 
   it('keeps the recovery rail when a remembered side layout temporarily stacks', async () => {
     measuredWidth = 640
-    fixture()
+    const view = fixture()
     const recovery = await screen.findByRole('button', { name: /窗口过窄/ })
     fireEvent.click(recovery)
     expect(screen.getByRole('toolbar', { name: '输入区域布局' })).toBeTruthy()
     expect(screen.getByRole('button', { name: '停靠到底部' })).toBeTruthy()
     expect(screen.getByRole('button', { name: '停靠到右侧' }).disabled).toBe(true)
+    expect(view.container.querySelector('[data-dsh-composer-split-active]')).toBeNull()
+    expect(view.container.querySelector('[data-dsh-composer-split-pane]')).toBeNull()
   })
 
   it('restores the right divider as soon as both columns fit', async () => {

@@ -289,7 +289,7 @@ export function ComposerSplitAction({ settings, sessionId, dismissInputTrigger }
 
   useLayoutEffect(() => {
     const control = controlRef.current
-    if (!split || control === null) return
+    if (!split || !canUseSideLayout(bodyRect?.width ?? 0) || control === null) return
     const layout = findLegacyLayout(control)
     if (layout === null) return
     legacyRef.current = layout
@@ -298,7 +298,7 @@ export function ComposerSplitAction({ settings, sessionId, dismissInputTrigger }
       legacyRef.current = null
       dispose()
     }
-  }, [split])
+  }, [bodyRect?.width, split])
 
   useEffect(() => {
     const owner = ownerRef.current
