@@ -75,13 +75,41 @@ try {
 
   const browser = await chromium.launch({ headless: true })
   try {
-    const page = await browser.newPage({ viewport: { width: 1280, height: 800 } })
-    const pageErrors = []
-    page.on('pageerror', error => pageErrors.push(error.message))
-    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 20_000 })
-    await page.locator('style[data-plugin="dsh-composer-layout"]').first().waitFor({ state: 'attached', timeout: 20_000 })
-    assert.equal(await page.title(), 'DeepSeek Harness')
-    assert.equal(pageErrors.length, 0, `Browser errors while loading the plugin:\n${pageErrors.join('\n')}`)
+    async function inspectHero(defaultPlacement) {
+      const context = await browser.newContext({ viewport: { width: 1280, height: 800 } })
+      const page = await context.newPage()
+      const pageErrors = []
+      page.on('pageerror', error => pageErrors.push(error.message))
+      await page.addInitScript((placement) => {
+        localStorage.setItem('dsh.composer-split.settings', JSON.stringify({
+          defaultPlacement: placement,
+          rememberPlacement: true,
+          bottomHandleHoverOnly: false,
+          defaultWidthPreset: 'medium',
+        }))
+      }, defaultPlacement)
+      await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 20_000 })
+      await page.locator('style[data-plugin="dsh-composer-layout"]').first().waitFor({ state: 'attached', timeout: 20_000 })
+      await page.locator('[data-phase="hero"]').waitFor({ state: 'attached', timeout: 20_000 })
+      assert.equal(await page.title(), 'DeepSeek Harness')
+      assert.equal(pageErrors.length, 0, `Browser errors while loading the plugin:\n${pageErrors.join('\n')}`)
+      const metrics = await page.locator('[data-input-scroll]').evaluate((element) => ({
+        height: element.getBoundingClientRect().height,
+        hasSideInputSizing: element.closest('[data-dsh-composer-side-max]') !== null,
+        hasSplitPane: element.closest('[data-dsh-composer-split-pane]') !== null,
+      }))
+      await context.close()
+      return metrics
+    }
+
+    const bottomHero = await inspectHero('bottom')
+    const rightPreferredHero = await inspectHero('right')
+    assert.equal(rightPreferredHero.hasSideInputSizing, false, 'Hero must not receive side-pane input sizing')
+    assert.equal(rightPreferredHero.hasSplitPane, false, 'Hero must not install a split Composer pane')
+    assert.ok(
+      rightPreferredHero.height >= bottomHero.height * 0.95,
+      `Hero Composer collapsed with a right preference (${rightPreferredHero.height}px vs ${bottomHero.height}px at bottom)`,
+    )
   } finally {
     await browser.close()
   }

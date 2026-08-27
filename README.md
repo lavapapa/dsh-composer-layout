@@ -57,10 +57,10 @@ dsh web --profile web
 
 ### Install directly from GitHub
 
-DSH installs the plugin bundle directly from a GitHub repository; pinning the command to `v0.1.9` makes the installed source explicit and repeatable.
+DSH installs the plugin bundle directly from a GitHub repository; pinning the command to `v0.1.10` makes the installed source explicit and repeatable.
 
 ```sh
-dsh plugin --profile web add "github:lavapapa/dsh-composer-layout#v0.1.9"
+dsh plugin --profile web add "github:lavapapa/dsh-composer-layout#v0.1.10"
 dsh web --profile web
 ```
 

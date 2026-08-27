@@ -216,21 +216,9 @@ export function ComposerSplitAction({ settings, sessionId, dismissInputTrigger }
     return () => {
       observer.disconnect()
       ownerRef.current = null
-      delete owner.composer.dataset.dshComposerSideMax
       setBodyRect(null)
     }
   }, [])
-
-  useLayoutEffect(() => {
-    const owner = ownerRef.current
-    if (owner === null) return
-    if (split && canUseSideLayout(bodyRect?.width ?? 0)) {
-      owner.composer.dataset.dshComposerSideMax = ''
-    } else {
-      delete owner.composer.dataset.dshComposerSideMax
-      if (!split) owner.body.style.removeProperty('--dsh-composer-inline-width')
-    }
-  }, [bodyRect, split])
 
   // In a side-by-side Composer, every competing popup must first dismiss the
   // slash/reference candidate list. The listener deliberately lives only in
@@ -320,7 +308,6 @@ export function ComposerSplitAction({ settings, sessionId, dismissInputTrigger }
       return
     }
     const next = clampComposerWidth(composerWidth, owner.body.getBoundingClientRect().width)
-    owner.body.style.setProperty('--dsh-composer-inline-width', `${next}px`)
     const layout = legacyRef.current
     if (layout !== null) layout.root.style.setProperty('--dsh-composer-split-width', `${next}px`)
     if (preferences.rememberPlacement && widthOverrideRef.current) {

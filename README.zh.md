@@ -57,10 +57,10 @@ dsh web --profile web
 
 ### 直接从 GitHub 安装
 
-DSH 可以直接从 GitHub 仓库安装插件 bundle；命令固定到 `v0.1.9`，因此每次安装的来源和版本都清楚可追溯。
+DSH 可以直接从 GitHub 仓库安装插件 bundle；命令固定到 `v0.1.10`，因此每次安装的来源和版本都清楚可追溯。
 
 ```sh
-dsh plugin --profile web add "github:lavapapa/dsh-composer-layout#v0.1.9"
+dsh plugin --profile web add "github:lavapapa/dsh-composer-layout#v0.1.10"
 dsh web --profile web
 ```
 

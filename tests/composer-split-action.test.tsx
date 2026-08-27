@@ -71,7 +71,34 @@ function fixture(props: Partial<ComposerSplitActionProps> = {}) {
   )
 }
 
+function heroFixture() {
+  return render(
+    <div data-phase="hero">
+      <div data-conversation-scroll="">
+        <div data-composer-seat="">
+          <div data-composer-card="">
+            <div data-input-scroll="">
+              <textarea aria-label="给智能体发消息" />
+            </div>
+            <ComposerSplitAction sessionId="new-session" settings={settings('right')} />
+          </div>
+        </div>
+      </div>
+    </div>,
+  )
+}
+
 describe('ComposerSplitAction', () => {
+  it('does not apply side-layout input sizing on the Hero page', async () => {
+    measuredWidth = 1_000
+    const view = heroFixture()
+    await waitFor(() => {
+      expect(view.container.querySelector('[data-dsh-composer-split-active]')).toBeNull()
+    })
+    expect(view.container.querySelector('[data-dsh-composer-side-max]')).toBeNull()
+    expect(view.container.querySelector('[data-dsh-composer-split-pane]')).toBeNull()
+  })
+
   it('keeps the recovery rail when a remembered side layout temporarily stacks', async () => {
     measuredWidth = 640
     fixture()

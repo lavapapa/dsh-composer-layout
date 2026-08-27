@@ -167,9 +167,9 @@
    its padding, then lets the textarea scrollport overflow out of the pane.
    Target every real layout ancestor in the Composer chain, rather than a
    private class or a data attribute DSH does not publish. */
-:global([data-dsh-composer-side-max] :has([data-composer-card])),
-:global([data-dsh-composer-side-max] [data-composer-card]),
-:global([data-dsh-composer-side-max] [data-input-scroll]) {
+:global([data-dsh-composer-split-pane] :has([data-composer-card])),
+:global([data-dsh-composer-split-pane] [data-composer-card]),
+:global([data-dsh-composer-split-pane] [data-input-scroll]) {
   flex: 1 1 0;
   min-height: 0;
 }
