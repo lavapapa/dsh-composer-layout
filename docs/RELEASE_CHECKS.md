@@ -27,7 +27,14 @@ pnpm test
 pnpm test:dsh-compat
 ```
 
-`pnpm test` covers the responsive width policy and plugin interaction contract. `pnpm test:dsh-compat` packs the exact working tree, installs that tarball into a fresh DSH Web profile, starts DSH, and confirms that the browser loads the plugin. Its default target is the supported DSH version; set `DSH_VERSION=latest` to check the newest published DSH package. The scheduled GitHub workflow runs that latest-version check weekly.
+`pnpm test` covers the responsive width policy, per-session storage, DOM ownership while switching layouts, width clamping, popup interaction, blank-input focus, and the settings guide. `pnpm test:dsh-compat` packs the exact working tree, installs that tarball into a fresh DSH Web profile, starts DSH, and checks the real Home Hero at desktop and narrow widths. It verifies that a remembered Right preference never turns the Hero into a split pane, clips its input, or creates horizontal overflow. The workflow stores those browser screenshots as CI artifacts, so a geometry failure can be inspected visually. Its default target is the supported DSH version; set `DSH_VERSION=latest` to check the newest published DSH package. The scheduled GitHub workflow runs that latest-version check weekly.
+
+| Test layer | Catches automatically | Leaves to a real browser pass |
+| --- | --- | --- |
+| Policy and storage tests | Breakpoint math, resize bounds, and one session leaking into another | Host-provided controls that the plugin does not own |
+| Component tests | Installing and removing the split adapter, restoring DSH's original scroll owner, temporary narrow fallback, divider limits, popup dismissal, and draft focus behavior | Browser layout, scrolling, and native text-selection rendering |
+| DSH compatibility browser test | Exact packed artifact installation, host startup, plugin loading, Hero input geometry, and narrow-window overflow | An active conversation with real menus and a long draft |
+| Release browser pass | — | Active-session scrolling, drag-selection, popup positions, narrow-to-wide restore, and bottom-layout non-interference |
 
 Before a release, also complete this short real-browser pass against the intended DSH version:
 
