@@ -4,8 +4,10 @@
 
 [![发布标签](https://img.shields.io/github/v/tag/lavapapa/dsh-composer-layout?label=release)](https://github.com/lavapapa/dsh-composer-layout/tags)
 [![npm](https://img.shields.io/npm/v/dsh-composer-layout?label=npm)](https://www.npmjs.com/package/dsh-composer-layout)
-[![插件验证](https://github.com/lavapapa/dsh-composer-layout/actions/workflows/verify.yml/badge.svg)](https://github.com/lavapapa/dsh-composer-layout/actions/workflows/verify.yml)
-[![DSH 兼容性](https://github.com/lavapapa/dsh-composer-layout/actions/workflows/dsh-latest-compat.yml/badge.svg)](https://github.com/lavapapa/dsh-composer-layout/actions/workflows/dsh-latest-compat.yml)
+[![收录于 Awesome DSH Plugin](https://img.shields.io/badge/收录于-Awesome%20DSH%20Plugin-3b82f6?logo=github)](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/blob/main/data/plugins/lavapapa__dsh-composer-layout.yml)
+[![收录于 Awesome DeepSeek Harness Plugins](https://img.shields.io/badge/收录于-Awesome%20DeepSeek%20Harness%20Plugins-3b82f6?logo=github)](https://github.com/Zhiyuan-Fan/Awesome-DeepSeek-Harness-Plugins)
+[![收录于 Awesome DSH Plugins](https://img.shields.io/badge/收录于-Awesome%20DSH%20Plugins-3b82f6?logo=github)](https://github.com/cccakeee/awesome-dsh-plugins/blob/main/docs/categories/web-ui.md)
+[![收录于 Oh My DSH](https://img.shields.io/badge/收录于-Oh%20My%20DSH-3b82f6?logo=github)](https://github.com/NoWint/Oh-My-DSH)
 [![许可证](https://img.shields.io/github/license/lavapapa/dsh-composer-layout)](LICENSE)
 
 [简介](#dsh-composer-layout) · [安装](#安装) · [为什么右侧布局](#为什么要把-composer-放在右侧) · [实际界面](#实际界面) · [切换与调宽](#切换与调宽) · [功能](#它增加了什么) · [验收](docs/RELEASE_CHECKS.md) · [贡献](CONTRIBUTING.md) · [English](README.md)

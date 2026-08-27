@@ -4,8 +4,10 @@
 
 [![Release](https://img.shields.io/github/v/tag/lavapapa/dsh-composer-layout?label=release)](https://github.com/lavapapa/dsh-composer-layout/tags)
 [![npm](https://img.shields.io/npm/v/dsh-composer-layout?label=npm)](https://www.npmjs.com/package/dsh-composer-layout)
-[![Verify plugin package](https://github.com/lavapapa/dsh-composer-layout/actions/workflows/verify.yml/badge.svg)](https://github.com/lavapapa/dsh-composer-layout/actions/workflows/verify.yml)
-[![Check latest DSH compatibility](https://github.com/lavapapa/dsh-composer-layout/actions/workflows/dsh-latest-compat.yml/badge.svg)](https://github.com/lavapapa/dsh-composer-layout/actions/workflows/dsh-latest-compat.yml)
+[![Included in Awesome DSH Plugin](https://img.shields.io/badge/Included%20in-Awesome%20DSH%20Plugin-3b82f6?logo=github)](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/blob/main/data/plugins/lavapapa__dsh-composer-layout.yml)
+[![Included in Awesome DeepSeek Harness Plugins](https://img.shields.io/badge/Included%20in-Awesome%20DeepSeek%20Harness%20Plugins-3b82f6?logo=github)](https://github.com/Zhiyuan-Fan/Awesome-DeepSeek-Harness-Plugins)
+[![Included in Awesome DSH Plugins](https://img.shields.io/badge/Included%20in-Awesome%20DSH%20Plugins-3b82f6?logo=github)](https://github.com/cccakeee/awesome-dsh-plugins/blob/main/docs/categories/web-ui.en.md)
+[![Included in Oh My DSH](https://img.shields.io/badge/Included%20in-Oh%20My%20DSH-3b82f6?logo=github)](https://github.com/NoWint/Oh-My-DSH)
 [![License](https://img.shields.io/github/license/lavapapa/dsh-composer-layout)](LICENSE)
 
 [Overview](#dsh-composer-layout) · [Install](#install) · [Why side by side?](#why-a-side-by-side-composer) · [See it in DSH](#see-it-in-dsh) · [Switch and resize](#switch-and-resize) · [Features](#what-it-adds) · [Release checks](docs/RELEASE_CHECKS.md) · [Contributing](CONTRIBUTING.md) · [简体中文](README.zh.md)
