@@ -8,7 +8,7 @@
 [![Check latest DSH compatibility](https://github.com/lavapapa/dsh-composer-layout/actions/workflows/dsh-latest-compat.yml/badge.svg)](https://github.com/lavapapa/dsh-composer-layout/actions/workflows/dsh-latest-compat.yml)
 [![License](https://img.shields.io/github/license/lavapapa/dsh-composer-layout)](LICENSE)
 
-[Overview](#dsh-composer-layout) · [Install](#install) · [Why side by side?](#why-a-side-by-side-composer) · [See it in DSH](#see-it-in-dsh) · [Features](#what-it-adds) · [Release checks](docs/RELEASE_CHECKS.md) · [Contributing](CONTRIBUTING.md) · [简体中文](README.zh.md)
+[Overview](#dsh-composer-layout) · [Install](#install) · [Why side by side?](#why-a-side-by-side-composer) · [See it in DSH](#see-it-in-dsh) · [Switch and resize](#switch-and-resize) · [Features](#what-it-adds) · [Release checks](docs/RELEASE_CHECKS.md) · [Contributing](CONTRIBUTING.md) · [简体中文](README.zh.md)
 
 > **Keep the answer in view while you write.** Dock Composer to the right so the answer and your growing draft can stay side by side.
 
@@ -27,6 +27,10 @@ Docking Composer to the right gives reading and writing separate vertical space.
 ## See it in DSH
 
 ![A real DSH Web session beside a tall right-side Composer](assets/screenshots/hero-en.png)
+
+## Switch and resize
+
+![Right-edge handle, layout switch, and right-pane resize](assets/screenshots/layout-guide-en.webp)
 
 ## What it adds
 
@@ -51,10 +55,10 @@ dsh web --profile web
 
 ### Install directly from GitHub
 
-DSH installs the plugin bundle directly from a GitHub repository; pinning the command to `v0.1.7` makes the installed source explicit and repeatable.
+DSH installs the plugin bundle directly from a GitHub repository; pinning the command to `v0.1.9` makes the installed source explicit and repeatable.
 
 ```sh
-dsh plugin --profile web add "github:lavapapa/dsh-composer-layout#v0.1.7"
+dsh plugin --profile web add "github:lavapapa/dsh-composer-layout#v0.1.9"
 dsh web --profile web
 ```
 

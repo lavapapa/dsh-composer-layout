@@ -225,6 +225,16 @@
   min-height: clamp(96px, 18cqh, 168px);
 }
 
+/* DSH sizes its textarea from the mirror layer inside the scrollport. The
+   right pane deliberately gives that scrollport the remaining height; make
+   the mirror stack fill the same space for a short draft too, so the native
+   textarea receives pointer and selection gestures everywhere users see an
+   input surface. A long draft still enlarges the stack beyond this minimum
+   and keeps the scrollport as DSH's single scrolling owner. */
+:global([data-dsh-composer-split-pane] [data-input-scroll] > :has(> [data-input-mirror])) {
+  min-height: 100%;
+}
+
 /* DSH anchors slash and reference candidates to the top edge of the Composer
    card. In the side layout that card fills the pane, so the native
    bottom-anchored dropdown would have almost no room above it. Move only an

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.9 — 2026-08-27
+
+- Make the right-side Composer's native textarea fill the visible short-draft surface, preserving native multi-click and drag selection in unused space.
+- Add compact Chinese and English layout guides to the README and plugin settings.
+
 ## 0.1.8 — 2026-08-25
 
 - Correct the npm and GitHub installation guidance so both README versions describe the published package accurately.

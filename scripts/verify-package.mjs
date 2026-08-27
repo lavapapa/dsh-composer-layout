@@ -12,6 +12,8 @@ const required = [
   'assets/icon.svg',
   'assets/screenshots/hero-en.png',
   'assets/screenshots/hero-zh.png',
+  'assets/screenshots/layout-guide-en.webp',
+  'assets/screenshots/layout-guide-zh.webp',
   'README.md',
 ]
 
@@ -21,4 +23,5 @@ if (manifest.dsh?.client?.platform !== 'web') throw new Error('dsh.client.platfo
 if (!patch.includes("name: 'dsh-composer-layout'")) throw new Error('cordis.patch.yml must mount the package')
 const client = await readFile(new URL('../lib/client.js', import.meta.url), 'utf8')
 if (!client.includes('id: "dsh-composer-layout"')) throw new Error('browser artifact id does not match package name')
+if (!client.includes('data:image/webp;base64,')) throw new Error('browser artifact must include the settings guide images')
 console.log(`verified ${manifest.name}@${manifest.version}`)

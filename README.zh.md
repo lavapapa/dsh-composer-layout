@@ -8,7 +8,7 @@
 [![DSH 兼容性](https://github.com/lavapapa/dsh-composer-layout/actions/workflows/dsh-latest-compat.yml/badge.svg)](https://github.com/lavapapa/dsh-composer-layout/actions/workflows/dsh-latest-compat.yml)
 [![许可证](https://img.shields.io/github/license/lavapapa/dsh-composer-layout)](LICENSE)
 
-[简介](#dsh-composer-layout) · [安装](#安装) · [为什么右侧布局](#为什么要把-composer-放在右侧) · [实际界面](#实际界面) · [功能](#它增加了什么) · [验收](docs/RELEASE_CHECKS.md) · [贡献](CONTRIBUTING.md) · [English](README.md)
+[简介](#dsh-composer-layout) · [安装](#安装) · [为什么右侧布局](#为什么要把-composer-放在右侧) · [实际界面](#实际界面) · [切换与调宽](#切换与调宽) · [功能](#它增加了什么) · [验收](docs/RELEASE_CHECKS.md) · [贡献](CONTRIBUTING.md) · [English](README.md)
 
 > **一边读，一边想，一边写。** 把 Composer 停到右侧，让回答和正在成形的提示词始终并排可见。
 
@@ -27,6 +27,10 @@
 ## 实际界面
 
 ![真实 DSH Web 会话与右侧高输入栏](assets/screenshots/hero-zh.png)
+
+## 切换与调宽
+
+![右侧白条、布局切换与右栏调宽](assets/screenshots/layout-guide-zh.webp)
 
 ## 它增加了什么
 
@@ -51,10 +55,10 @@ dsh web --profile web
 
 ### 直接从 GitHub 安装
 
-DSH 可以直接从 GitHub 仓库安装插件 bundle；命令固定到 `v0.1.7`，因此每次安装的来源和版本都清楚可追溯。
+DSH 可以直接从 GitHub 仓库安装插件 bundle；命令固定到 `v0.1.9`，因此每次安装的来源和版本都清楚可追溯。
 
 ```sh
-dsh plugin --profile web add "github:lavapapa/dsh-composer-layout#v0.1.7"
+dsh plugin --profile web add "github:lavapapa/dsh-composer-layout#v0.1.9"
 dsh web --profile web
 ```
 

@@ -81,6 +81,7 @@ await Promise.all([
     platform: 'browser',
     target: 'es2024',
     sourcemap: false,
+    loader: { '.webp': 'dataurl' },
     external: ['react', 'react-dom', 'react/jsx-runtime'],
     plugins: [cssModules],
     banner: { js: `window.__ModuleLoader__.load({ id: ${JSON.stringify(clientId)}, factory: (require) => { var module = { exports: {} }; var exports = module.exports;` },

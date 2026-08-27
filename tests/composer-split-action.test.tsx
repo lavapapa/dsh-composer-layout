@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, createEvent, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { ComposerSplitAction, type ComposerSplitActionProps } from '../src/client/ComposerSplitAction.tsx'
 
 let measuredWidth = 1_000
@@ -110,6 +110,16 @@ describe('ComposerSplitAction', () => {
     if (blankArea === null) throw new Error('fixture input scroll area is missing')
     fireEvent.pointerDown(blankArea, { button: 0 })
     expect(document.activeElement).toBe(input)
+  })
+
+  it('leaves native pointer gestures on the right-side textarea untouched', async () => {
+    measuredWidth = 1_000
+    fixture()
+    await screen.findByRole('separator', { name: /调整输入区域宽度/ })
+    const input = screen.getByRole('textbox', { name: '给智能体发消息' })
+    const pointerDown = createEvent.pointerDown(input, { button: 0 })
+    fireEvent(input, pointerDown)
+    expect(pointerDown.defaultPrevented).toBe(false)
   })
 
   it('records an explicit dock choice for the current session', async () => {

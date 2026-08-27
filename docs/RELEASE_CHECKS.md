@@ -11,7 +11,7 @@ The plugin owns presentation and interaction around the DSH Composer. It does no
 | Placement | Composer can remain at the bottom or dock to the right. The configured default applies to a new session; with session memory enabled, a session keeps its own placement and width. | Settings check and session-switch check in a real browser. |
 | Responsive layout | Right docking is available only when Chat and Composer can both keep their minimum usable width. Below that threshold the current right preference temporarily stacks; the recovery rail remains available, the Right choice is disabled, and the side layout returns when width is restored. | `layout-policy` tests and narrow-to-wide browser check. |
 | Width control | The visible divider resizes the right pane only within the shared Chat/Composer bounds. The divider cannot leave the Composer pane at either limit. This is still a released feature and must remain covered until it is deliberately removed from code and documentation. | `layout-policy` tests and min/max drag check in a real browser. |
-| Reading and drafting | Chat and a long right-side draft scroll independently. Clicking unused space in the tall draft area focuses the editor without scrolling Chat or changing the draft. | Component focus test and long-draft browser check. |
+| Reading and drafting | Chat and a long right-side draft scroll independently. With a short draft, the native textarea fills the visible right-side input surface, so clicking, multi-click selection, and drag selection work in unused space without scrolling Chat or changing the draft. | Component focus test plus short- and long-draft browser checks. |
 | Composer popups | In the right layout, slash and reference candidates stay inside the pane. Opening another Composer popup closes those candidates first; the normal bottom Composer keeps DSH's native popup behavior. | Component popup test plus slash, reference, model, access, and context checks in a real browser. |
 | Host boundary | The plugin uses the current DSH Web Composer structure only. It does not maintain a compatibility path for obsolete host layouts and does not change DSH's own bottom layout. | Current-version compatibility check and bottom-layout regression check. |
 
@@ -34,7 +34,7 @@ Before a release, also complete this short real-browser pass against the intende
 1. Open a fresh session, switch between Bottom and Right, then switch sessions to verify the saved session layout behaves as configured.
 2. In Right, drag the divider to both limits and back. Confirm both columns remain visible and the handle stays inside the Composer pane.
 3. Resize below the two-column threshold, confirm the temporary stacked view and disabled Right action, then resize back and confirm Right restores automatically.
-4. Enter a multi-line draft, scroll it, and confirm Chat does not move. Click the draft's unused area and confirm the textarea receives focus.
+4. With a short Right-side draft, click and multi-click unused input space, then drag a selection; confirm the native textarea handles those gestures. Enter a multi-line draft, scroll it, and confirm Chat does not move.
 5. Trigger `/` and `@`, then open model, access, and context popups. Confirm candidates close before the other popup opens and every menu stays inside the right pane, including at a short window height.
 6. Return to Bottom and confirm the plugin no longer changes DSH's normal input-trigger behavior.
 

@@ -20,6 +20,17 @@
   line-height: 1.5;
 }
 
+.guide {
+  width: min(100%, 400px);
+  margin: -2px 0 0;
+}
+
+.guide img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
 .row {
   display: flex;
   align-items: center;

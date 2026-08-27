@@ -5,6 +5,8 @@ import type { ComposerLayoutSettings } from '../settings.ts'
 import { COMPOSER_LAYOUT_DEFAULTS } from '../settings.ts'
 import { readLocalSettings, writeLocalSetting } from './settings-storage.ts'
 import css from './ComposerLayoutSettingsTab.module.css'
+import guideEn from '../../assets/screenshots/layout-guide-en.webp'
+import guideZh from '../../assets/screenshots/layout-guide-zh.webp'
 
 export interface ComposerLayoutSettingsInjected {
   settings: SettingsScope<ComposerLayoutSettings>
@@ -29,6 +31,7 @@ export function ComposerLayoutSettingsTab({ t, settings }: Props) {
     effectiveSettings.getSnapshot.bind(effectiveSettings),
   )
   const translate = typeof t === 'function' ? t : ((key: string) => key)
+  const guide = translate('guideLocale') === 'zh' ? guideZh : guideEn
   const [localOverrides, setLocalOverrides] = useState<Partial<ComposerLayoutSettings>>(readLocalSettings)
   const value = {
     ...COMPOSER_LAYOUT_DEFAULTS,
@@ -47,6 +50,9 @@ export function ComposerLayoutSettingsTab({ t, settings }: Props) {
         <h2>{translate('title')}</h2>
         <p>{translate('description')}</p>
       </div>
+      <figure className={css.guide}>
+        <img src={guide} alt={translate('guideAlt')} />
+      </figure>
       <label className={css.row}>
         <span>
           <strong>{translate('defaultPlacement')}</strong>
