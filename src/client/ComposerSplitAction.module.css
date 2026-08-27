@@ -254,6 +254,17 @@
 }
 
 @container dsh-composer-split-root (max-width: 680px) {
+  /* The split adapter remains mounted so the right-layout preference can be
+     restored when width returns. Its full-height input chain must not leak
+     into this temporary bottom layout, or it overrides DSH's native Composer
+     card height and collapses the sticky footer to a single pixel. */
+  :global([data-dsh-composer-split-pane] :has([data-composer-card])),
+  :global([data-dsh-composer-split-pane] [data-composer-card]),
+  :global([data-dsh-composer-split-pane] [data-input-scroll]) {
+    flex: 0 1 auto;
+    min-height: auto;
+  }
+
   :global([data-dsh-composer-split-active='true'] > [data-dsh-composer-split-body]) {
     display: flex !important;
     flex-direction: column;
