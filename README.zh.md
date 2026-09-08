@@ -43,13 +43,15 @@
 - 右侧布局中，打开模型、权限、上下文等 Composer 面板前会收起斜杠／引用候选，避免浮层互相遮挡；空间不足时，右栏第三方控件收进省略号浮层。
 - 适配 DSH 的嵌套会话滚动容器，并在宿主容器与聊天区之间桥接滚动事件。已验证的范围与尚未完整复现的流结束时序问题见[验收说明](docs/RELEASE_CHECKS.md)。
 
+左右布局下，正文使用左栏的可用宽度，通过插件分隔条调整阅读空间。此时隐藏 DSH 原生的两条正文调宽手柄，避免它们覆盖 Composer；该模式不提供独立的正文留白调宽。切回底部布局后，原生手柄恢复，DSH 已保存的正文宽度偏好仍然保留。
+
 本插件只负责界面布局，不新增面向模型的工具，不改变提示词或额度统计。
 
 ## 安装
 
 ### 从 npm 安装
 
-npm 包包含预构建好的插件 bundle。0.1.13 已在 DSH **0.1.2-rc.1** 和 **0.1.3-alpha.2** 中通过隔离兼容性测试，这两个版本的用户可以使用同一个插件包；此结论不覆盖未来的 alpha 版本。测试范围与剩余限制见[验收说明](docs/RELEASE_CHECKS.md#0113-release-evidence)。旧版 DSH 用户仍可指定 `dsh-composer-layout@0.1.12`；当前 npm 版本可用 `npm view dsh-composer-layout version` 查询。
+npm 包包含预构建好的插件 bundle。0.1.14 已在 DSH **0.1.2-rc.1** 和 **0.1.3-alpha.2** 中通过隔离兼容性测试，这两个版本的用户可以使用同一个插件包；此结论不覆盖未来的 alpha 版本。测试范围与剩余限制见[验收说明](docs/RELEASE_CHECKS.md#0114-release-evidence)。旧版 DSH 用户仍可指定 `dsh-composer-layout@0.1.12`；当前 npm 版本可用 `npm view dsh-composer-layout version` 查询。
 
 ```sh
 dsh plugin --profile web add dsh-composer-layout@latest
@@ -58,10 +60,10 @@ dsh web --profile web
 
 ### 直接从 GitHub 安装
 
-DSH 可以直接从 GitHub 仓库安装插件 bundle；新版本标签为 `v0.1.13`，针对 DSH 0.1.2-rc.1。旧版 DSH 用户仍可使用 `v0.1.12` 标签。
+DSH 可以直接从 GitHub 仓库安装插件 bundle；新版本标签为 `v0.1.14`，针对 DSH 0.1.2-rc.1。旧版 DSH 用户仍可使用 `v0.1.12` 标签。
 
 ```sh
-dsh plugin --profile web add "github:lavapapa/dsh-composer-layout#v0.1.13"
+dsh plugin --profile web add "github:lavapapa/dsh-composer-layout#v0.1.14"
 dsh web --profile web
 ```
 

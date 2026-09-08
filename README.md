@@ -43,13 +43,15 @@ Docking Composer to the right gives reading and writing separate vertical space.
 - In the right-side layout, close slash/reference candidates before another Composer popup opens, so model, access, and context panels do not overlap them. Third-party right-slot controls collapse into an ellipsis popup when space is limited.
 - Adapt to DSH's nested conversation scroll containers and bridge scroll events between the host container and Chat. See [release checks](docs/RELEASE_CHECKS.md) for verification scope and the outstanding stream-end timing issue.
 
+In the right-side layout, Chat uses the available left-column width and the plugin divider adjusts reading space. DSH's two native transcript-width handles are hidden to prevent them from overlapping Composer; independent transcript whitespace adjustment is unavailable in this mode. Returning to Bottom restores those handles and preserves DSH's saved width preference.
+
 The plugin is presentation-only: it does not add model-facing tools, change prompts, or alter token accounting.
 
 ## Install
 
 ### Install from npm
 
-The npm package contains the prebuilt plugin bundle. Version 0.1.13 has passed isolated compatibility tests on DSH **0.1.2-rc.1** and **0.1.3-alpha.2**; users of either version can use the same package. This does not promise compatibility with future alpha releases. See [release checks](docs/RELEASE_CHECKS.md#0113-release-evidence) for coverage and remaining limitations. Users of older DSH versions can pin `dsh-composer-layout@0.1.12`. Check the current npm release with `npm view dsh-composer-layout version`.
+The npm package contains the prebuilt plugin bundle. Version 0.1.14 has passed isolated compatibility tests on DSH **0.1.2-rc.1** and **0.1.3-alpha.2**; users of either version can use the same package. This does not promise compatibility with future alpha releases. See [release checks](docs/RELEASE_CHECKS.md#0114-release-evidence) for coverage and remaining limitations. Users of older DSH versions can pin `dsh-composer-layout@0.1.12`. Check the current npm release with `npm view dsh-composer-layout version`.
 
 ```sh
 dsh plugin --profile web add dsh-composer-layout@latest
@@ -58,10 +60,10 @@ dsh web --profile web
 
 ### Install directly from GitHub
 
-DSH installs the plugin bundle directly from a GitHub repository; the new release tag is `v0.1.13` for DSH 0.1.2-rc.1. Users of older DSH versions can keep the `v0.1.12` tag.
+DSH installs the plugin bundle directly from a GitHub repository; the new release tag is `v0.1.14` for DSH 0.1.2-rc.1. Users of older DSH versions can keep the `v0.1.12` tag.
 
 ```sh
-dsh plugin --profile web add "github:lavapapa/dsh-composer-layout#v0.1.13"
+dsh plugin --profile web add "github:lavapapa/dsh-composer-layout#v0.1.14"
 dsh web --profile web
 ```
 

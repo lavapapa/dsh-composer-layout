@@ -23,7 +23,7 @@ const environment = {
 }
 
 function dsh(args, options = {}) {
-  return spawnSync('pnpm', ['dlx', dshPackage, ...args], {
+  return spawnSync('pnpm', ['--allow-build=fs-ext', 'dlx', dshPackage, ...args], {
     cwd: root,
     encoding: 'utf8',
     env: environment,
@@ -86,7 +86,7 @@ try {
   ].map(row => zstdCompressSync(Buffer.from(JSON.stringify(row) + '\n')))))
 
   const output = []
-  server = spawn('pnpm', ['dlx', dshPackage, '--profile', 'web', '--port', String(port), '--no-open'], {
+  server = spawn('pnpm', ['--allow-build=fs-ext', 'dlx', dshPackage, '--profile', 'web', '--port', String(port), '--no-open'], {
     cwd: root,
     env: environment,
     stdio: ['ignore', 'pipe', 'pipe'],
@@ -183,6 +183,11 @@ try {
         assert.equal(geometry.display, 'grid')
         assert.ok(geometry.chat.width >= 320 && geometry.composer.width >= 360)
         assert.ok(geometry.chat.right <= geometry.composer.left + 1, 'Chat and Composer must not overlap')
+        const nativeHandles = page.locator('[data-width-handle]')
+        assert.equal(await nativeHandles.count(), 2)
+        assert.deepEqual(await nativeHandles.evaluateAll(elements => elements.map(el => getComputedStyle(el).display)), ['none', 'none'], 'Native transcript handles must be hidden in split layout')
+        const flow = await page.locator('[data-chat-flow]').boundingBox()
+        assert.ok(flow.x >= geometry.chat.left && flow.x + flow.width <= geometry.chat.right + 1, 'Transcript must stay inside Chat')
         const separator = page.getByRole('separator', { name: /调整输入区域宽度/ })
         const handle = await separator.boundingBox()
         await page.mouse.move(handle.x + handle.width / 2, handle.y + handle.height / 2)
@@ -194,6 +199,16 @@ try {
         await separator.click()
         await page.getByRole('button', { name: '停靠到底部', exact: true }).click()
         await page.locator('[data-dsh-composer-split-active]').waitFor({ state: 'detached' })
+        assert.ok((await nativeHandles.evaluateAll(elements => elements.map(el => getComputedStyle(el).display))).every(display => display !== 'none'), 'Bottom layout must restore native transcript handles')
+        const transcriptHandle = page.locator('[data-width-handle="right"]')
+        const transcriptBox = await transcriptHandle.boundingBox()
+        const flowBefore = await page.locator('[data-chat-flow]').boundingBox()
+        await page.mouse.move(transcriptBox.x + transcriptBox.width / 2, transcriptBox.y + 100)
+        await page.mouse.down()
+        await page.mouse.move(transcriptBox.x + transcriptBox.width / 2 - 60, transcriptBox.y + 100, { steps: 8 })
+        await page.mouse.up()
+        const flowAfter = await page.locator('[data-chat-flow]').boundingBox()
+        assert.ok(flowAfter.width < flowBefore.width - 60, 'Native transcript resizing must still work at bottom')
         await page.getByRole('button', { name: '打开输入区域布局菜单', exact: true }).click()
         await page.getByRole('button', { name: /自动选择布局/ }).click()
         await page.locator('[data-dsh-composer-split-active]').waitFor({ state: 'attached' })

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.14
+
+- Prevent DSH's native transcript-width handles from overlapping the right-side Composer by hiding both handles while split layout is active. Chat uses the available left-column width, adjusted with the plugin divider; independent transcript whitespace adjustment is unavailable in this mode.
+- Restore the native transcript-width handles in Bottom layout without changing DSH's saved width preference. Real-browser checks on DSH 0.1.2-rc.1 and 0.1.3-alpha.2 passed, including native width dragging after returning to Bottom.
+- Explicitly allow the test runner to build DSH's `fs-ext` dependency. This release does not claim to fix the intermittently disappearing question composer.
+
 ## 0.1.13
 
 - Pass isolated compatibility tests on DSH 0.1.2-rc.1 and 0.1.3-alpha.2 with the same plugin implementation. Available through npm and GitHub tag `v0.1.13`; users of older DSH versions can pin 0.1.12. Future alpha versions require separate verification.

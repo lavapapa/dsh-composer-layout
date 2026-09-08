@@ -221,6 +221,12 @@
   container-name: dsh-composer-split-root;
 }
 
+/* Transcript handles use the whole conversation width in DSH. In split mode,
+   the pane divider owns reading-space resizing; bottom mode stays native. */
+:global([data-dsh-composer-split-active='true'] [data-width-handle]) {
+  display: none !important;
+}
+
 :global([data-dsh-composer-split-active='true'] [data-dsh-composer-split-body]) {
   display: grid !important;
   grid-template-columns: minmax(320px, 1fr) minmax(360px, var(--dsh-composer-split-width, 420px));
@@ -231,6 +237,7 @@
 }
 
 :global([data-dsh-composer-split-body] [data-dsh-composer-split-chat]) {
+  --dsh-chat-content-width: 100%;
   flex: 1 1 0 !important;
   min-width: 0;
   min-height: 0 !important;

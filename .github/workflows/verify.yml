@@ -24,6 +24,11 @@ jobs:
 
   dsh-compatibility:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        dsh-version: ['0.1.2-rc.1', '0.1.3-alpha.2']
+    env:
+      DSH_VERSION: ${{ matrix.dsh-version }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -37,6 +42,6 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: dsh-compat-screenshots
+          name: dsh-compat-screenshots-${{ matrix.dsh-version }}
           path: test-artifacts/dsh-compat
           if-no-files-found: ignore
