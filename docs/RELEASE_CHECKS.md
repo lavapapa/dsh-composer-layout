@@ -52,7 +52,9 @@ Record the DSH version, plugin version, and the result of this browser pass in t
 
 The width-control change passed isolated real-browser compatibility checks on DSH 0.1.2-rc.1 and 0.1.3-alpha.2. In split layout, both native transcript-width handles were hidden and Chat used its available column width. Returning to Bottom restored the native handles, preserved the stored width preference, and allowed native width dragging. Existing layout compatibility checks also passed. These results apply to the tested versions, not future alpha releases or every manual check above.
 
-The intermittent disappearance of the question composer remains a separate unresolved issue; this release does not claim a fix.
+The intermittent disappearance of the question composer remains a separate unresolved issue; this release does not claim a fix. An isolated rc.1 experiment using real UI components and simulated client-side question requests did not reproduce it: 17 samples covered long drafts and questions, narrow/short viewports, pane scrolling, settings changes, and rapid request replacement after minimizing. Each sample retained a pending question, a visible hit-testable question panel, and a hidden fallback Composer. This does not exercise the complete model-to-Host Remote request path, other installed plugins, or prove the reported bug absent.
+
+To repeat that diagnostic without using real conversations or model calls, run `node scripts/test-question-visibility.mjs`. It uses a temporary DSH home on port 3814 and writes screenshots plus `samples.json` to `QUESTION_ARTIFACT_DIR` (default `/tmp/dsh-question-visibility-results`).
 
 ## 0.1.13 release evidence
 
