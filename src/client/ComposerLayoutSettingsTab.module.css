@@ -72,6 +72,19 @@
   accent-color: var(--dsw-alias-state-business-primary);
 }
 
+.row input[type='range'] {
+  flex: 1 1 160px;
+  max-width: 220px;
+  accent-color: var(--dsw-alias-state-business-primary);
+}
+
+.row output {
+  min-width: 3.5em;
+  color: var(--dsw-alias-label-primary);
+  font-variant-numeric: tabular-nums;
+  text-align: end;
+}
+
 .number {
   width: 92px;
   min-width: 92px;

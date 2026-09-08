@@ -6,15 +6,15 @@ import { createPortal } from 'react-dom'
 import type { PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import type {} from '@deepseek-ai/dsh-client-ui-conversation/client'
 import type { SettingsScope } from '@deepseek-ai/dsh-client-runtime/client'
-import type { ComposerLayoutSettings } from '../settings.ts'
+import type { ComposerLayoutPlacement, ComposerLayoutSettings } from '../settings.ts'
 import { COMPOSER_LAYOUT_DEFAULTS } from '../settings.ts'
 import {
   readLocalSettings, readSessionLayout, writeSessionLayout,
   type ComposerSessionLayout,
 } from './settings-storage.ts'
 import {
-  MIN_CHAT_WIDTH, MIN_COMPOSER_WIDTH, SIDE_LAYOUT_BREAKPOINT,
-  canUseSideLayout, clampComposerWidth,
+  MIN_CHAT_WIDTH, MIN_COMPOSER_WIDTH,
+  canUseSideLayout, clampComposerWidth, resolvePlacement,
 } from './layout-policy.js'
 import css from './ComposerSplitAction.module.css'
 
@@ -57,6 +57,12 @@ interface MenuAnchor {
   left: number
 }
 
+interface RightSlotOverflow {
+  trailing: HTMLElement
+  slot: HTMLElement
+  items: HTMLElement[]
+}
+
 function widthForPreset(preset: ComposerLayoutSettings['defaultWidthPreset'], bodyWidth: number): number {
   const fraction = preset === 'narrow' ? 0.28 : preset === 'wide' ? 0.46 : 0.36
   return clampComposerWidth(bodyWidth * fraction, bodyWidth)
@@ -74,7 +80,7 @@ function findLegacyLayout(control: HTMLElement): LegacyLayout | null {
   const root = control.closest<HTMLElement>('[data-phase]')
   if (root === null) return null
   const body = root.querySelector<HTMLElement>(
-    ':scope > [data-conversation-scroll], :scope > [data-dsh-composer-split-body]',
+    '[data-conversation-scroll], [data-dsh-composer-split-body]',
   )
   if (body === null) return null
   const sessionWrapper = body.querySelector<HTMLElement>(':scope > [data-slot="conversation.session"]')
@@ -82,6 +88,22 @@ function findLegacyLayout(control: HTMLElement): LegacyLayout | null {
   const composer = body.querySelector<HTMLElement>(':scope > [data-composer-seat]')
   if (sessionWrapper === null || !(chat instanceof HTMLElement) || composer === null) return null
   return { root, body, sessionWrapper, chat, composer }
+}
+
+function installScrollBridge({ body, chat }: Pick<LegacyLayout, 'body' | 'chat'>): () => void {
+  const forwarded = 'dsh-composer-layout:forwarded-scroll'
+  const forward = (target: HTMLElement) => (event: Event): void => {
+    if (event instanceof CustomEvent && event.detail === forwarded) return
+    target.dispatchEvent(new CustomEvent('scroll', { detail: forwarded }))
+  }
+  const forwardToBody = forward(body)
+  const forwardToChat = forward(chat)
+  chat.addEventListener('scroll', forwardToBody, { passive: true })
+  body.addEventListener('scroll', forwardToChat, { passive: true })
+  return () => {
+    chat.removeEventListener('scroll', forwardToBody)
+    body.removeEventListener('scroll', forwardToChat)
+  }
 }
 
 function installLegacyLayout(layout: LegacyLayout): () => void {
@@ -113,6 +135,59 @@ function rectOf(body: HTMLElement): BodyRect {
   const rect = body.getBoundingClientRect()
   const contentRight = body.clientWidth > 0 ? rect.left + body.clientWidth : rect.right
   return { top: rect.top, contentRight, height: rect.height, width: rect.width }
+}
+
+function sameRightSlotOverflow(left: RightSlotOverflow | null, right: RightSlotOverflow | null): boolean {
+  if (left === null || right === null) return left === right
+  return left.trailing === right.trailing && left.slot === right.slot
+    && left.items.length === right.items.length
+    && left.items.every((item, index) => item === right.items[index])
+}
+
+/**
+ * DSH exposes the third-party input controls through the public
+ * `conversation.input.right` slot. Its wrapper is the only stable boundary:
+ * model, meter, and send controls are host-owned siblings after it.
+ */
+function findRightSlotOverflow(composer: HTMLElement): RightSlotOverflow | null {
+  const scrollport = composer.querySelector<HTMLElement>('[data-input-scroll]')
+  const row = scrollport?.nextElementSibling
+  const trailing = row?.lastElementChild
+  if (!(trailing instanceof HTMLElement)) return null
+
+  const slot = trailing.querySelector<HTMLElement>(':scope > [data-slot="conversation.input.right"]')
+  if (slot === null) return null
+  const items = Array.from(slot.children).filter((child): child is HTMLElement => child instanceof HTMLElement)
+  return items.length === 0 ? null : { trailing, slot, items }
+}
+
+function visualWidth(element: HTMLElement): number {
+  const width = element.getBoundingClientRect().width
+  if (width > 0) return width
+  return Array.from(element.children)
+    .filter((child): child is HTMLElement => child instanceof HTMLElement)
+    .reduce((total, child) => total + visualWidth(child), 0)
+}
+
+function shouldCollapseRightSlot(overflow: RightSlotOverflow): boolean {
+  const { trailing, slot } = overflow
+  const capacity = trailing.clientWidth || trailing.getBoundingClientRect().width
+  if (capacity <= 0) return false
+  const siblingWidth = Array.from(trailing.children)
+    .filter((child): child is HTMLElement => child instanceof HTMLElement)
+    .filter(child => child !== slot && !child.hasAttribute('data-dsh-composer-slot-overflow-trigger'))
+    .reduce((total, child) => total + visualWidth(child), 0)
+  const gap = Number.parseFloat(getComputedStyle(trailing).columnGap) || 8
+  const controls = siblingWidth + visualWidth(slot)
+  return controls + gap * Math.max(0, trailing.children.length - 1) > capacity
+}
+
+function clearSlotOverflow(slot: HTMLElement | null): void {
+  if (slot === null) return
+  delete slot.dataset.dshComposerSlotOverflow
+  delete slot.dataset.dshComposerSlotOverflowOpen
+  slot.style.removeProperty('--dsh-composer-slot-overflow-left')
+  slot.style.removeProperty('--dsh-composer-slot-overflow-top')
 }
 
 /** Placement menu plus the plugin-owned, reversible split adapter. */
@@ -148,11 +223,18 @@ export function ComposerSplitAction({ settings, sessionId, dismissInputTrigger }
   const legacyRef = useRef<LegacyLayout | null>(null)
   const widthDragRef = useRef<{ x: number; width: number; moved: boolean } | null>(null)
   const appliedPresetRef = useRef<ComposerLayoutSettings['defaultWidthPreset'] | null>(null)
+  const [placementIntent, setPlacementIntent] = useState<ComposerLayoutPlacement>('bottom')
   const [split, setSplit] = useState(false)
   const [composerWidth, setComposerWidth] = useState(DEFAULT_WIDTH)
   const [bodyRect, setBodyRect] = useState<BodyRect | null>(null)
   const [menuOpen, setMenuOpen] = useState(false)
   const [sideMenuAnchor, setSideMenuAnchor] = useState<MenuAnchor | null>(null)
+  const [toolbarHint, setToolbarHint] = useState<string | null>(null)
+  const [rightSlotOverflow, setRightSlotOverflow] = useState<RightSlotOverflow | null>(null)
+  const [rightSlotCollapsed, setRightSlotCollapsed] = useState(false)
+  const [rightSlotOverflowOpen, setRightSlotOverflowOpen] = useState(false)
+  const rightSlotOverflowTriggerRef = useRef<HTMLButtonElement>(null)
+  const rightSlotOverflowSlotRef = useRef<HTMLElement | null>(null)
 
   // ConversationRoot keeps the Composer bar mounted while the active session
   // changes. Refresh the session-scoped record here instead of letting the
@@ -166,6 +248,11 @@ export function ComposerSplitAction({ settings, sessionId, dismissInputTrigger }
     appliedPresetRef.current = null
     setMenuOpen(false)
     setSideMenuAnchor(null)
+    clearSlotOverflow(rightSlotOverflowSlotRef.current)
+    rightSlotOverflowSlotRef.current = null
+    setRightSlotCollapsed(false)
+    setRightSlotOverflowOpen(false)
+    setPlacementIntent('bottom')
     setSplit(false)
     setComposerWidth(DEFAULT_WIDTH)
   }, [sessionId])
@@ -176,7 +263,8 @@ export function ComposerSplitAction({ settings, sessionId, dismissInputTrigger }
     const placement = preferences.rememberPlacement && remembered.placement !== undefined
       ? remembered.placement
       : preferences.defaultPlacement
-    setSplit(placement === 'right')
+    setPlacementIntent(placement)
+    setSplit(resolvePlacement(placement, bodyRect.width, bodyRect.height, preferences.autoThreshold) === 'right')
 
     if (appliedPresetRef.current === preferences.defaultWidthPreset) return
     appliedPresetRef.current = preferences.defaultWidthPreset
@@ -220,6 +308,17 @@ export function ComposerSplitAction({ settings, sessionId, dismissInputTrigger }
     }
   }, [])
 
+  // DSH binds its scroll listener only once. The side layout moves the actual
+  // scrollport between the host body and ChatView, so forward native scrolls to
+  // the element DSH may have observed before the layout changed.
+  useLayoutEffect(() => {
+    const control = controlRef.current
+    if (control === null) return
+    const layout = findLegacyLayout(control)
+    if (layout === null) return
+    return installScrollBridge(layout)
+  }, [sessionId])
+
   // In a side-by-side Composer, every competing popup must first dismiss the
   // slash/reference candidate list. The listener deliberately lives only in
   // the side layout so the normal bottom Composer retains DSH's own behavior.
@@ -237,6 +336,103 @@ export function ComposerSplitAction({ settings, sessionId, dismissInputTrigger }
     composer.addEventListener('pointerdown', onPopupTriggerPointerDown, true)
     return () => { composer.removeEventListener('pointerdown', onPopupTriggerPointerDown, true) }
   }, [dismissInputTrigger, split])
+
+  // Third-party right-slot entries have no host-provided overflow container.
+  // Keep them in their original slot so controls with their own state (such as
+  // a quota meter) remain intact. Only collapse that slot when its natural
+  // width would force the native toolbar into a second row.
+  useLayoutEffect(() => {
+    const composer = ownerRef.current?.composer
+    if (!split || composer === undefined) {
+      clearSlotOverflow(rightSlotOverflowSlotRef.current)
+      rightSlotOverflowSlotRef.current = null
+      setRightSlotOverflow(null)
+      setRightSlotCollapsed(false)
+      setRightSlotOverflowOpen(false)
+      return
+    }
+
+    const refresh = (): void => {
+      const next = findRightSlotOverflow(composer)
+      const previous = rightSlotOverflowSlotRef.current
+      if (previous !== null && previous !== next?.slot) clearSlotOverflow(previous)
+      const collapsed = next !== null && shouldCollapseRightSlot(next)
+      if (next !== null && collapsed) {
+        next.slot.dataset.dshComposerSlotOverflow = ''
+      } else {
+        clearSlotOverflow(next?.slot ?? null)
+      }
+      rightSlotOverflowSlotRef.current = next?.slot ?? null
+      setRightSlotOverflow(current => sameRightSlotOverflow(current, next) ? current : next)
+      setRightSlotCollapsed(collapsed)
+      if (!collapsed) {
+        setRightSlotOverflowOpen(false)
+      }
+    }
+
+    refresh()
+    const mutationObserver = new MutationObserver(refresh)
+    const resizeObserver = new ResizeObserver(refresh)
+    mutationObserver.observe(composer, { childList: true, subtree: true })
+    resizeObserver.observe(composer)
+    const current = findRightSlotOverflow(composer)
+    if (current !== null) {
+      resizeObserver.observe(current.trailing)
+      resizeObserver.observe(current.slot)
+    }
+    return () => {
+      mutationObserver.disconnect()
+      resizeObserver.disconnect()
+      clearSlotOverflow(rightSlotOverflowSlotRef.current)
+      rightSlotOverflowSlotRef.current = null
+    }
+  }, [split, sessionId])
+
+  useLayoutEffect(() => {
+    if (rightSlotOverflowOpen) return
+    clearSlotOverflow(rightSlotOverflow?.slot ?? null)
+    if (rightSlotCollapsed && rightSlotOverflow !== null) {
+      rightSlotOverflow.slot.dataset.dshComposerSlotOverflow = ''
+    }
+  }, [rightSlotCollapsed, rightSlotOverflow, rightSlotOverflowOpen])
+
+  useLayoutEffect(() => {
+    if (!rightSlotOverflowOpen || rightSlotOverflow === null) return
+    const trigger = rightSlotOverflowTriggerRef.current
+    if (trigger === null) return
+    const triggerRect = trigger.getBoundingClientRect()
+    const slot = rightSlotOverflow.slot
+    slot.dataset.dshComposerSlotOverflowOpen = ''
+    slot.style.setProperty('--dsh-composer-slot-overflow-left', '8px')
+    slot.style.setProperty('--dsh-composer-slot-overflow-top', `${Math.max(8, triggerRect.top - 40)}px`)
+    const width = Math.max(38, slot.getBoundingClientRect().width || visualWidth(slot))
+    const left = Math.max(8, Math.min(triggerRect.right - width, window.innerWidth - width - 8))
+    slot.style.setProperty('--dsh-composer-slot-overflow-left', `${left}px`)
+    slot.style.setProperty('--dsh-composer-slot-overflow-top', `${Math.max(8, triggerRect.top - slot.getBoundingClientRect().height - 6)}px`)
+  }, [rightSlotOverflow, rightSlotOverflowOpen])
+
+  useEffect(() => {
+    if (!rightSlotOverflowOpen) return
+    const onPointerDown = (event: globalThis.PointerEvent): void => {
+      const target = event.target
+      if (!(target instanceof Node)) return
+      if (rightSlotOverflowTriggerRef.current?.contains(target) === true) return
+      if (rightSlotOverflowSlotRef.current?.contains(target) === true) return
+      setRightSlotOverflowOpen(false)
+    }
+    const onKeyDown = (event: globalThis.KeyboardEvent): void => {
+      if (event.key === 'Escape') {
+        setRightSlotOverflowOpen(false)
+        rightSlotOverflowTriggerRef.current?.focus()
+      }
+    }
+    document.addEventListener('pointerdown', onPointerDown)
+    document.addEventListener('keydown', onKeyDown)
+    return () => {
+      document.removeEventListener('pointerdown', onPointerDown)
+      document.removeEventListener('keydown', onKeyDown)
+    }
+  }, [rightSlotOverflowOpen])
 
   // The right pane deliberately gives the draft scrollport the remaining
   // vertical space. DSH's textarea itself still grows only with its content,
@@ -290,13 +486,34 @@ export function ComposerSplitAction({ settings, sessionId, dismissInputTrigger }
   useLayoutEffect(() => {
     const control = controlRef.current
     if (!split || !canUseSideLayout(bodyRect?.width ?? 0) || control === null) return
-    const layout = findLegacyLayout(control)
-    if (layout === null) return
-    legacyRef.current = layout
-    const dispose = installLegacyLayout(layout)
+    let dispose: (() => void) | undefined
+    let observer: MutationObserver | undefined
+    const install = (): void => {
+      if (dispose !== undefined) return
+      const layout = findLegacyLayout(control)
+      if (layout === null) return
+      legacyRef.current = layout
+      dispose = installLegacyLayout(layout)
+      observer?.disconnect()
+      observer = undefined
+    }
+
+    install()
+    if (dispose === undefined) {
+      // A remembered right layout can be resolved before ConversationRoot has
+      // mounted the session surface. Wait for that one host mount instead of
+      // leaving the Composer's logical state split while its DOM is still
+      // stacked.
+      const root = control.closest<HTMLElement>('[data-phase]')
+      if (root !== null) {
+        observer = new MutationObserver(install)
+        observer.observe(root, { childList: true, subtree: true })
+      }
+    }
     return () => {
+      observer?.disconnect()
       legacyRef.current = null
-      dispose()
+      dispose?.()
     }
   }, [bodyRect?.width, split])
 
@@ -316,11 +533,11 @@ export function ComposerSplitAction({ settings, sessionId, dismissInputTrigger }
     }
   }, [composerWidth, preferences.defaultWidthPreset, preferences.rememberPlacement, sessionId, split])
 
-  const setDock = (nextSplit: boolean): void => {
+  const setDock = (placement: ComposerLayoutPlacement): void => {
     setMenuOpen(false)
-    setSplit(nextSplit)
+    setPlacementIntent(placement)
+    setSplit(resolvePlacement(placement, bodyRect?.width ?? 0, bodyRect?.height ?? 0, preferences.autoThreshold) === 'right')
     if (preferences.rememberPlacement) {
-      const placement = nextSplit ? 'right' : 'bottom'
       sessionLayoutRef.current = { ...sessionLayoutRef.current, placement }
       writeSessionLayout(sessionId, sessionLayoutRef.current)
     }
@@ -390,28 +607,53 @@ export function ComposerSplitAction({ settings, sessionId, dismissInputTrigger }
       role="toolbar"
       aria-label="输入区域布局"
       style={style}
+      onMouseLeave={() => { setToolbarHint(null) }}
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget)) setToolbarHint(null)
+      }}
     >
       <button
         type="button"
         className={css.toolButton}
-        aria-pressed={!split}
-        title="停靠到底部"
+        aria-pressed={placementIntent === 'bottom'}
         aria-label="停靠到底部"
-        onClick={() => { setDock(false) }}
+        aria-describedby={toolbarHint === '固定在底部' ? 'dsh-composer-layout-hint' : undefined}
+        onMouseEnter={() => { setToolbarHint('固定在底部') }}
+        onFocus={() => { setToolbarHint('固定在底部') }}
+        onClick={() => { setDock('bottom') }}
       >
         <span className={`${css.dockIcon} ${css.dockBottom}`} aria-hidden="true" />
       </button>
       <button
         type="button"
         className={css.toolButton}
-        aria-pressed={split}
-        title="停靠到右侧"
-        aria-label="停靠到右侧"
+        aria-pressed={placementIntent === 'right'}
+        aria-label={sideLayoutAvailable ? '停靠到右侧' : '停靠到右侧；需要至少 680px 的会话主区域'}
+        aria-describedby={toolbarHint === '固定在右侧' ? 'dsh-composer-layout-hint' : undefined}
         disabled={!sideLayoutAvailable}
-        onClick={() => { setDock(true) }}
+        onMouseEnter={() => { setToolbarHint('固定在右侧') }}
+        onFocus={() => { setToolbarHint('固定在右侧') }}
+        onClick={() => { setDock('right') }}
       >
         <span className={`${css.dockIcon} ${css.dockRight}`} aria-hidden="true" />
       </button>
+      <button
+        type="button"
+        className={css.toolButton}
+        aria-pressed={placementIntent === 'auto'}
+        aria-label={`自动选择布局；当前停靠到${split ? '右侧' : '底部'}`}
+        aria-describedby={toolbarHint === '宽幅靠右，窄幅靠下' ? 'dsh-composer-layout-hint' : undefined}
+        onMouseEnter={() => { setToolbarHint('宽幅靠右，窄幅靠下') }}
+        onFocus={() => { setToolbarHint('宽幅靠右，窄幅靠下') }}
+        onClick={() => { setDock('auto') }}
+      >
+        <svg className={css.autoIcon} viewBox="0 0 20 16" fill="none" aria-hidden="true">
+          <rect x="2.25" y="2.25" width="15.5" height="11.5" rx="1.75" stroke="currentColor" strokeWidth="1.5" />
+          <path d="M12.25 3.5V9.5H3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </button>
+      {!sideLayoutAvailable && <span className={css.unavailableHint}>至少 680px</span>}
+      {toolbarHint !== null && <span id="dsh-composer-layout-hint" className={css.toolbarHint} role="tooltip">{toolbarHint}</span>}
     </div>
   )
 
@@ -439,7 +681,8 @@ export function ComposerSplitAction({ settings, sessionId, dismissInputTrigger }
     )
     : null
 
-  const sideToolbar = split && menuOpen && sideMenuAnchor !== null
+  const showingRecoveryRail = placementIntent === 'right' && bodyRect !== null && !sideLayoutAvailable
+  const sideToolbar = (split || showingRecoveryRail) && menuOpen && sideMenuAnchor !== null
     ? createPortal(toolbar(css.toolbarSide, sideMenuAnchor), document.body)
     : null
 
@@ -455,7 +698,7 @@ export function ComposerSplitAction({ settings, sessionId, dismissInputTrigger }
   // A right-layout preference survives the temporary stacked layout below the
   // breakpoint. The recovery rail keeps that state legible and lets the user
   // choose Bottom; Right stays disabled until two usable columns fit again.
-  const recoveryTrigger = split && bodyRect !== null && !sideLayoutAvailable
+  const recoveryTrigger = showingRecoveryRail
     ? (
       <button
         ref={edgeTriggerRef}
@@ -474,7 +717,7 @@ export function ComposerSplitAction({ settings, sessionId, dismissInputTrigger }
     )
     : null
 
-  const bottomTrigger = !split && bodyRect !== null
+  const bottomTrigger = !split && !showingRecoveryRail && bodyRect !== null
     ? (
       <button
         ref={edgeTriggerRef}
@@ -493,11 +736,34 @@ export function ComposerSplitAction({ settings, sessionId, dismissInputTrigger }
     )
     : null
 
-  const bottomToolbar = !split && menuOpen && bodyRect !== null
+  const bottomToolbar = !split && !showingRecoveryRail && menuOpen && bodyRect !== null
     ? toolbar(css.toolbarBottom, {
       top: bodyRect.top + bodyRect.height / 2,
       left: bodyRect.contentRight - 19,
     })
+    : null
+
+  const rightSlotOverflowTrigger = split && rightSlotCollapsed && rightSlotOverflow !== null
+    ? createPortal(
+      <button
+        ref={rightSlotOverflowTriggerRef}
+        type="button"
+        className={css.slotOverflowTrigger}
+        data-dsh-composer-slot-overflow-trigger=""
+        aria-label="显示额外输入控件"
+        aria-expanded={rightSlotOverflowOpen}
+        onClick={() => {
+          setRightSlotOverflowOpen(open => !open)
+        }}
+      >
+        <svg className={css.slotOverflowIcon} viewBox="0 0 16 16" aria-hidden="true">
+          <circle cx="3" cy="8" r="1.25" fill="currentColor" />
+          <circle cx="8" cy="8" r="1.25" fill="currentColor" />
+          <circle cx="13" cy="8" r="1.25" fill="currentColor" />
+        </svg>
+      </button>,
+      rightSlotOverflow.trailing,
+    )
     : null
 
   return (
@@ -512,6 +778,7 @@ export function ComposerSplitAction({ settings, sessionId, dismissInputTrigger }
       {separator}
       {recoveryTrigger}
       {sideToolbar}
+      {rightSlotOverflowTrigger}
     </div>
   )
 }

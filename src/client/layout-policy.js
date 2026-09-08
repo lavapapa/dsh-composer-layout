@@ -13,3 +13,12 @@ export function clampComposerWidth(width, bodyWidth) {
 export function canUseSideLayout(bodyWidth) {
   return bodyWidth >= SIDE_LAYOUT_BREAKPOINT
 }
+
+/** Resolve the rendered layout from the stored user preference and main-area geometry. */
+export function resolvePlacement(preference, bodyWidth, bodyHeight, autoThreshold) {
+  if (preference === 'bottom') return 'bottom'
+  if (preference === 'right') return canUseSideLayout(bodyWidth) ? 'right' : 'bottom'
+  return canUseSideLayout(bodyWidth) && bodyHeight > 0 && bodyWidth / bodyHeight >= autoThreshold
+    ? 'right'
+    : 'bottom'
+}

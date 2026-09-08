@@ -64,6 +64,40 @@
   outline: none;
 }
 
+.toolButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.42;
+}
+
+.autoIcon {
+  width: 20px;
+  height: 16px;
+}
+
+.toolbarHint {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 6px);
+  z-index: 1;
+  padding: 4px 7px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 6px;
+  background: var(--dsw-alias-bg-elevated);
+  box-shadow: 0 4px 12px rgb(0 0 0 / 16%);
+  color: var(--dsw-alias-label-secondary);
+  font-size: 11px;
+  line-height: 16px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.unavailableHint {
+  padding-inline: 3px;
+  color: var(--dsw-alias-label-secondary);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
 .dockIcon {
   position: relative;
   box-sizing: border-box;
@@ -118,7 +152,10 @@
   background: rgb(255 255 255 / 78%);
   opacity: 0.58;
   transform: translateY(-50%);
-  box-shadow: 0 0 0 1px rgb(0 0 0 / 12%), 0 1px 5px rgb(0 0 0 / 20%);
+  box-shadow:
+    -1px 0 0 rgb(0 0 0 / 24%),
+    0 0 0 1px rgb(0 0 0 / 14%),
+    0 1px 5px rgb(0 0 0 / 20%);
   transition: opacity 120ms ease, width 120ms ease, left 120ms ease;
 }
 
@@ -136,14 +173,19 @@
 /* The fallback divider mirrors native inline-end: its hit rail stays on the
    boundary while the visible grip sits clearly inside the Composer. */
 .separator::before {
-  left: 12px;
+  left: 8px;
   opacity: 0;
+  /* 白色把手依靠投影与右侧微弱轮廓从聊天区中浮出；不再绘制左侧边线，
+     避免在左右布局的分界处叠出一条多余的竖线。 */
+  box-shadow:
+    1px 0 0 rgb(0 0 0 / 14%),
+    0 1px 5px rgb(0 0 0 / 20%);
 }
 
 .separator:hover::before,
 .separator:focus-visible::before,
 .separator:active::before {
-  left: 11px;
+  left: 7px;
 }
 
 :global([data-dsh-composer-bottom-handle-hover-only='true']) .edgeTrigger::before {
@@ -179,7 +221,7 @@
   container-name: dsh-composer-split-root;
 }
 
-:global([data-dsh-composer-split-active='true'] > [data-dsh-composer-split-body]) {
+:global([data-dsh-composer-split-active='true'] [data-dsh-composer-split-body]) {
   display: grid !important;
   grid-template-columns: minmax(320px, 1fr) minmax(360px, var(--dsh-composer-split-width, 420px));
   grid-template-rows: minmax(0, 1fr);
@@ -218,11 +260,31 @@
   --dsh-chat-content-width: 100%;
   --dsh-composer-card-max-width: 100%;
   --dsh-composer-side-clearance: 12px;
-  --dsh-composer-text-max-height: max(96px, calc(100cqh - 104px));
+  /* InputBar defines the normal 14-line cap on its Composer seat after this
+     plugin sheet loads. This side-only value must win that cascade so the
+     scrollport uses the whole area above the controls. */
+  --dsh-composer-text-max-height: max(96px, calc(100cqh - 104px)) !important;
 }
 
 :global([data-dsh-composer-split-pane] [data-input-scroll]) {
   min-height: clamp(96px, 18cqh, 168px);
+}
+
+/* DSH lets the control row wrap by default. That is useful for a compact
+   bottom Composer, but in the right pane it creates two unrelated rows:
+   tools above, then model/send below. Keep the row together here and let the
+   model control use the remaining width, where DSH already truncates its
+   label naturally. */
+:global([data-dsh-composer-split-pane] [data-input-scroll] + *) {
+  flex-wrap: nowrap !important;
+  gap: 8px !important;
+  min-width: 0;
+}
+
+:global([data-dsh-composer-split-pane] [data-input-scroll] + * > :last-child) {
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+  justify-content: flex-end;
 }
 
 /* DSH sizes its textarea from the mirror layer inside the scrollport. The
@@ -235,20 +297,71 @@
   min-height: 100%;
 }
 
-/* DSH anchors slash and reference candidates to the top edge of the Composer
-   card. In the side layout that card fills the pane, so the native
-   bottom-anchored dropdown would have almost no room above it. Move only an
-   open candidate/menu anchor to the control row: candidates then grow upward
-   within the right pane, as they do above the compact bottom Composer. */
-:global([data-dsh-composer-split-pane] [data-composer-card] > :has(:is([role='listbox'], [role='menu']))) {
-  inset: auto 0 80px;
-  height: 0;
-}
-
-/* The host clamps against the full viewport, but a side-pane menu must also
-   stay below the session header. The pane is a size container, so its own
-   height gives the correct ceiling when a short browser window leaves less
-   room than the normal 320px menu cap. */
+/* DSH positions model, access, slash, and reference popups from their own
+   triggers. A card-wide `:has([role])` selector also matches the whole
+   controls row in current DSH, collapsing that row when a menu opens. Limit
+   only the popup surface's height in the side pane. */
 :global([data-dsh-composer-split-pane] :is([role='listbox'], [role='menu'])) {
   max-height: min(320px, calc(100cqh - 128px)) !important;
+}
+
+/* DSH exposes third-party input controls through `conversation.input.right`.
+   The slot itself becomes the overflow surface, keeping every plugin control
+   mounted and interactive instead of recreating a partial copy. */
+.slotOverflowTrigger {
+  order: -1;
+  display: grid;
+  place-items: center;
+  flex: 0 0 24px;
+  width: 24px;
+  height: 28px;
+  margin-block: 0;
+  margin-inline: -4px -3px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--dsw-alias-label-secondary);
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.slotOverflowTrigger:hover,
+.slotOverflowTrigger:focus-visible,
+.slotOverflowTrigger[aria-expanded='true'] {
+  outline: none;
+  background: var(--dsw-alias-interactive-bg-hover);
+  color: var(--dsw-alias-state-business-primary);
+}
+
+.slotOverflowIcon {
+  width: 14px;
+  height: 14px;
+}
+
+:global([data-dsh-composer-split-pane] [data-dsh-composer-slot-overflow]) {
+  position: absolute !important;
+  display: flex !important;
+  align-items: center;
+  gap: 8px;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+:global([data-dsh-composer-split-pane] [data-dsh-composer-slot-overflow][data-dsh-composer-slot-overflow-open]) {
+  position: fixed !important;
+  z-index: 52;
+  left: var(--dsh-composer-slot-overflow-left);
+  top: var(--dsh-composer-slot-overflow-top);
+  box-sizing: border-box;
+  min-height: 38px;
+  padding: 4px;
+  border: 1px solid var(--dsw-alias-border-inverted);
+  border-radius: 12px;
+  background: var(--dsw-specific-menu);
+  box-shadow: var(--dsw-shadow-lv3);
+  visibility: visible;
+  pointer-events: auto;
 }

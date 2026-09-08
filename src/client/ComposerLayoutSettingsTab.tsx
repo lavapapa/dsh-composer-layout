@@ -65,8 +65,28 @@ export function ComposerLayoutSettingsTab({ t, settings }: Props) {
         >
           <option value="bottom">{translate('bottom')}</option>
           <option value="right">{translate('right')}</option>
+          <option value="auto">{translate('auto')}</option>
         </select>
       </label>
+      {value.defaultPlacement === 'auto' && (
+        <label className={css.row}>
+          <span>
+            <strong>{translate('autoThreshold')}</strong>
+            <small>{translate('autoThresholdHint')}</small>
+          </span>
+          <input
+            type="range"
+            min="0.5"
+            max="2"
+            step="0.05"
+            value={value.autoThreshold}
+            disabled={!snapshot.writable}
+            aria-valuetext={value.autoThreshold.toFixed(2)}
+            onChange={event => set('autoThreshold', Number(event.currentTarget.value))}
+          />
+          <output>{value.autoThreshold.toFixed(2)}</output>
+        </label>
+      )}
       <label className={css.row}>
         <span>
           <strong>{translate('rememberPlacement')}</strong>

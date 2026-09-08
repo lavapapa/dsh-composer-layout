@@ -44,7 +44,7 @@ export function readSessionLayout(sessionId: string): ComposerSessionLayout {
   const value = readSessionLayouts()[sessionId]
   if (value === null || typeof value !== 'object' || Array.isArray(value)) return {}
   return {
-    ...value.placement === 'bottom' || value.placement === 'right'
+    ...value.placement === 'bottom' || value.placement === 'right' || value.placement === 'auto'
       ? { placement: value.placement }
       : {},
     ...typeof value.width === 'number' && Number.isFinite(value.width) && value.width > 0

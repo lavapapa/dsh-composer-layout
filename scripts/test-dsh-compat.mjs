@@ -1,14 +1,15 @@
 import assert from 'node:assert/strict'
 import { spawn, spawnSync } from 'node:child_process'
 import { once } from 'node:events'
-import { mkdir, mkdtemp, readdir, rm } from 'node:fs/promises'
+import { mkdir, mkdtemp, readdir, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { chromium } from 'playwright'
+import { zstdCompressSync } from 'node:zlib'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
-const dshVersion = process.env.DSH_VERSION ?? '0.1.1-rc.2'
+const dshVersion = process.env.DSH_VERSION ?? '0.1.2-rc.1'
 const dshPackage = `@deepseek-ai/dsh@${dshVersion}`
 const port = Number(process.env.DSH_COMPAT_PORT ?? 3813)
 const home = await mkdtemp(join(tmpdir(), 'dsh-composer-layout-compat-'))
@@ -34,16 +35,14 @@ function commandOutput(result) {
   return `${result.stdout ?? ''}${result.stderr ?? ''}`
 }
 
-async function waitForServer(url, output) {
+async function waitForServer(output) {
   const deadline = Date.now() + 45_000
   while (Date.now() < deadline) {
-    try {
-      const response = await fetch(url)
-      if (response.ok) return
-    } catch {}
+    const match = output.join('').match(/dsh web:\s+(https?:\/\/\S+)/)
+    if (match !== null) return match[1]
     await new Promise(resolve => setTimeout(resolve, 250))
   }
-  throw new Error(`DSH Web did not start within 45 seconds.\n${output.join('')}`)
+  throw new Error(`DSH Web did not announce an access URL within 45 seconds.\n${output.join('')}`)
 }
 
 let server
@@ -65,6 +64,27 @@ try {
   assert.match(config.stdout, /id: ui-composer-layout/)
   assert.match(config.stdout, /name: dsh-composer-layout/)
 
+  const testSessionId = 'composer-layout-compat-session'
+  const testWorkspace = join(home, 'workspace')
+  await mkdir(testWorkspace)
+  const projectKey = `--${testWorkspace.replace(/^\/+|\/+$/g, '').replaceAll('/', '-')}--`
+  const sessionDirectory = join(home, 'sessions', projectKey, testSessionId)
+  await mkdir(sessionDirectory, { recursive: true })
+  const now = Date.now()
+  const events = [
+    ['turn/start', { turn: 1 }],
+    ['step/start', { turn: 1, step: 1 }],
+    ['user/message', { id: 'compat-user', role: 'user', content: [{ type: 'text', text: 'Composer layout compatibility test' }], source: { kind: 'user' } }],
+    ['assistant/message', { turn: 1, step: 1, message: { id: 'compat-answer', role: 'assistant', content: [{ type: 'text', text: Array.from({ length: 100 }, (_, index) => `Paragraph ${index + 1}: a long answer for independent scrolling verification.`).join('\n\n') }], source: { kind: 'model', provider: 'test', model: 'test' } } }],
+    ['step/end', { turn: 1, step: 1 }],
+    ['turn/end', { turn: 1, reason: { kind: 'completed' } }],
+    ['session/title', { title: 'Composer compatibility test', messageSeqs: [], source: { kind: 'user' } }],
+  ]
+  await writeFile(join(sessionDirectory, 'session.jsonl.zstd'), Buffer.concat([
+    { type: 'session', version: 0, id: testSessionId, createdAt: now, delegationDepth: 0, cwd: testWorkspace },
+    ...events.map(([type, data], seq) => ({ type, seq, time: now + seq, data, ...type.endsWith('/message') ? { surfaceOp: 'append' } : {} })),
+  ].map(row => zstdCompressSync(Buffer.from(JSON.stringify(row) + '\n')))))
+
   const output = []
   server = spawn('pnpm', ['dlx', dshPackage, '--profile', 'web', '--port', String(port), '--no-open'], {
     cwd: root,
@@ -73,8 +93,7 @@ try {
   })
   server.stdout.on('data', chunk => output.push(chunk.toString()))
   server.stderr.on('data', chunk => output.push(chunk.toString()))
-  const url = `http://127.0.0.1:${String(port)}`
-  await waitForServer(url, output)
+  const url = await waitForServer(output)
 
   const browser = await chromium.launch({ headless: true })
   try {
@@ -83,6 +102,7 @@ try {
       const page = await context.newPage()
       const pageErrors = []
       page.on('pageerror', error => pageErrors.push(error.message))
+      page.on('console', message => { if (message.type() === 'error') pageErrors.push(message.text()) })
       await page.addInitScript((placement) => {
         localStorage.setItem('dsh.composer-split.settings', JSON.stringify({
           defaultPlacement: placement,
@@ -91,6 +111,14 @@ try {
           defaultWidthPreset: 'medium',
         }))
       }, defaultPlacement)
+      // 仅在隔离浏览器暴露已加载插件的真实 Context，用公开 sessions.open
+      // 精确打开测试会话；不替换 RPC、会话投影或业务组件。
+      await page.route('**/plugins/**', async route => {
+        if (!route.request().url().includes('dsh-composer-layout/client.js')) return route.continue()
+        const response = await route.fetch()
+        const body = (await response.text()).replace('function apply(ctx) {\n  const settingsService', 'function apply(ctx) {\n  document.documentElement.__composerTestContext = ctx;\n  const settingsService')
+        await route.fulfill({ response, body })
+      })
       await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 20_000 })
       const testingNotice = page.getByRole('button', { name: 'Continue', exact: true })
       await testingNotice.waitFor({ state: 'visible', timeout: 3_000 })
@@ -102,6 +130,7 @@ try {
         .catch(() => {})
       await page.locator('style[data-plugin="dsh-composer-layout"]').first().waitFor({ state: 'attached', timeout: 20_000 })
       await page.locator('[data-phase="hero"]').waitFor({ state: 'attached', timeout: 20_000 })
+
       assert.equal(await page.title(), 'DeepSeek Harness')
       assert.equal(pageErrors.length, 0, `Browser errors while loading the plugin:\n${pageErrors.join('\n')}`)
       const metrics = await page.locator('[data-input-scroll]').evaluate((element) => {
@@ -123,6 +152,66 @@ try {
       if (artifactDirectory !== undefined) {
         await mkdir(artifactDirectory, { recursive: true })
         await page.screenshot({ path: join(artifactDirectory, `hero-${defaultPlacement}-${viewport.width}x${viewport.height}.png`) })
+      }
+      if (defaultPlacement === 'bottom') {
+        await page.getByRole('button', { name: 'Settings', exact: true }).click()
+        await page.getByRole('button', { name: 'Plugins', exact: true }).click()
+        await page.getByText('Composer Layout', { exact: true }).click()
+        const settingsPanel = page.locator('section[aria-label="Composer Layout"]')
+        await settingsPanel.waitFor({ state: 'visible' })
+        await settingsPanel.getByRole('combobox').first().selectOption('auto')
+        await settingsPanel.getByRole('slider').fill('0.75')
+        assert.equal(await settingsPanel.getByRole('slider').inputValue(), '0.75')
+        console.log('verified Composer Layout settings registration and automatic threshold interaction')
+        await page.getByRole('button', { name: 'Close', exact: true }).click()
+        await page.getByRole('button', { name: 'Settings', exact: true }).click()
+        await page.getByRole('button', { name: 'Plugins', exact: true }).click()
+        await page.getByText('Composer Layout', { exact: true }).click()
+        assert.equal(await settingsPanel.getByRole('combobox').first().inputValue(), 'auto')
+        assert.equal(await settingsPanel.getByRole('slider').inputValue(), '0.75')
+        await page.getByRole('button', { name: 'Close', exact: true }).click()
+        await page.setViewportSize({ width: 1920, height: 900 })
+        await page.evaluate(async id => { await document.documentElement.__composerTestContext.sessions.open(id) }, testSessionId)
+        await page.locator('[data-dsh-composer-split-adapter="plugin"]').waitFor({ state: 'attached', timeout: 20_000 })
+        await page.getByText('Paragraph 100: a long answer for independent scrolling verification.', { exact: true }).waitFor({ state: 'attached', timeout: 20_000 })
+        await page.locator('[data-dsh-composer-split-active="true"]').waitFor({ state: 'attached', timeout: 20_000 })
+        const geometry = await page.locator('[data-dsh-composer-split-body]').evaluate(body => {
+          const chat = body.querySelector('[data-dsh-composer-split-chat]').getBoundingClientRect()
+          const composer = body.querySelector('[data-dsh-composer-split-pane]').getBoundingClientRect()
+          return { chat: chat.toJSON(), composer: composer.toJSON(), display: getComputedStyle(body).display }
+        })
+        assert.equal(geometry.display, 'grid')
+        assert.ok(geometry.chat.width >= 320 && geometry.composer.width >= 360)
+        assert.ok(geometry.chat.right <= geometry.composer.left + 1, 'Chat and Composer must not overlap')
+        const separator = page.getByRole('separator', { name: /调整输入区域宽度/ })
+        const handle = await separator.boundingBox()
+        await page.mouse.move(handle.x + handle.width / 2, handle.y + handle.height / 2)
+        await page.mouse.down()
+        await page.mouse.move(handle.x - 80, handle.y + handle.height / 2, { steps: 8 })
+        await page.mouse.up()
+        const resized = await page.locator('[data-dsh-composer-split-pane]').boundingBox()
+        assert.ok(resized.width > geometry.composer.width + 40, 'Dragging must widen the right pane')
+        await separator.click()
+        await page.getByRole('button', { name: '停靠到底部', exact: true }).click()
+        await page.locator('[data-dsh-composer-split-active]').waitFor({ state: 'detached' })
+        await page.getByRole('button', { name: '打开输入区域布局菜单', exact: true }).click()
+        await page.getByRole('button', { name: /自动选择布局/ }).click()
+        await page.locator('[data-dsh-composer-split-active]').waitFor({ state: 'attached' })
+        await page.setViewportSize({ width: 600, height: 1300 })
+        await page.locator('[data-dsh-composer-split-active]').waitFor({ state: 'detached' })
+        await page.getByRole('button', { name: '打开输入区域布局菜单', exact: true }).click()
+        assert.equal(await page.getByRole('button', { name: /停靠到右侧/ }).isDisabled(), true)
+        // 自动模式已在宽屏时选定；缩窄不应要求重新选择，变宽后应自行恢复。
+        await page.keyboard.press('Escape')
+        await page.setViewportSize({ width: 1920, height: 900 })
+        await page.locator('[data-dsh-composer-split-active]').waitFor({ state: 'attached' })
+        const scroll = page.locator('[data-dsh-composer-split-chat]')
+        await scroll.evaluate(el => { el.scrollTop = 200; el.dispatchEvent(new Event('scroll')) })
+        await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))))
+        assert.ok((await scroll.evaluate(el => el.scrollTop)) < 300, 'Reading near the answer start must not jump to the bottom')
+        assert.equal(pageErrors.length, 0, pageErrors.join('\n'))
+        if (artifactDirectory !== undefined) await page.screenshot({ path: join(artifactDirectory, 'active-split.png') })
+        console.log('verified real session: two-column geometry, dragging, bottom/auto switching, narrow-width disabling, and settled answer scrolling')
       }
       await context.close()
       return metrics
@@ -160,7 +249,7 @@ try {
     await browser.close()
   }
 
-  console.log(`verified DSH ${dshVersion}: profile install, Web startup, and desktop/narrow Hero plugin geometry`)
+  console.log(`verified DSH ${dshVersion}: isolated install, settings, Hero geometry, and real-session layout interactions`)
 } finally {
   if (server !== undefined && server.exitCode === null && !server.killed) {
     server.kill('SIGTERM')

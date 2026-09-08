@@ -36,11 +36,12 @@
 
 ## 它增加了什么
 
-- 在“**设置 → 插件 → Composer 布局**”中选择底部或右侧布局。
-- 提供可见的停靠手柄；右侧布局下，分隔条也可以调整 Composer 栏宽度。
+- 在“**设置 → 插件 → Composer 布局**”中选择底部、右侧或自动布局。自动模式按会话主区域的宽高比切换，阈值范围为 0.5–2，默认为 1；使用右侧布局还需满足两栏的最小宽度。
+- 停靠白条向左移，与 Composer 输入框边界留出距离；右侧布局下，分隔条也可以调整 Composer 栏宽度。宽度不足时，禁用的“右侧”选项会提示所需条件。
 - 打开“记住当前会话布局”后，分别保存每个会话的布局，以及手动调整过的右侧栏宽度。
 - 窗口装不下两个可用栏位时，暂时回到上下布局，同时保留布局手柄；宽度恢复后，记住的右侧布局会自动回来。
-- 右侧布局中，打开模型、权限、上下文等 Composer 面板前会收起斜杠／引用候选，避免浮层互相遮挡。
+- 右侧布局中，打开模型、权限、上下文等 Composer 面板前会收起斜杠／引用候选，避免浮层互相遮挡；空间不足时，右栏第三方控件收进省略号浮层。
+- 适配 DSH 的嵌套会话滚动容器，并在宿主容器与聊天区之间桥接滚动事件。已验证的范围与尚未完整复现的流结束时序问题见[验收说明](docs/RELEASE_CHECKS.md)。
 
 本插件只负责界面布局，不新增面向模型的工具，不改变提示词或额度统计。
 
@@ -48,7 +49,7 @@
 
 ### 从 npm 安装
 
-npm 包已经包含预构建好的插件 bundle：
+npm 包包含预构建好的插件 bundle，可用 `npm view dsh-composer-layout version` 查询 npm 渠道版本。GitHub 标签与 npm 发布彼此独立：0.1.13 针对 DSH 0.1.2-rc.1，本次仅发布到 GitHub，不更新 npm `latest`；安装该源码版本请使用下方 GitHub 命令。旧版 DSH 用户仍可指定 `dsh-composer-layout@0.1.12`。
 
 ```sh
 dsh plugin --profile web add dsh-composer-layout@latest
@@ -57,10 +58,10 @@ dsh web --profile web
 
 ### 直接从 GitHub 安装
 
-DSH 可以直接从 GitHub 仓库安装插件 bundle；命令固定到 `v0.1.12`，因此每次安装的来源和版本都清楚可追溯。
+DSH 可以直接从 GitHub 仓库安装插件 bundle；新版本标签为 `v0.1.13`，针对 DSH 0.1.2-rc.1。旧版 DSH 用户仍可使用 `v0.1.12` 标签。
 
 ```sh
-dsh plugin --profile web add "github:lavapapa/dsh-composer-layout#v0.1.12"
+dsh plugin --profile web add "github:lavapapa/dsh-composer-layout#v0.1.13"
 dsh web --profile web
 ```
 
@@ -74,7 +75,7 @@ dsh --profile web --dump-config
 
 ### 更新
 
-需要更新到当前 npm 版本时：
+需要更新到 npm 渠道版本时，先用 `npm view dsh-composer-layout version` 确认版本，再执行：
 
 ```sh
 dsh plugin --profile web remove dsh-composer-layout
@@ -82,7 +83,7 @@ dsh plugin --profile web add dsh-composer-layout@latest
 dsh web --profile web
 ```
 
-插件支持的 DSH Web 包版本范围以 [`package.json`](package.json) 为准；[DSH 兼容性工作流](https://github.com/lavapapa/dsh-composer-layout/actions/workflows/dsh-latest-compat.yml) 会定期用当前 DSH 版本检查插件。
+依赖声明见 [`package.json`](package.json)，实际验证过的 DSH 版本见[验收说明](docs/RELEASE_CHECKS.md)；[DSH 兼容性工作流](https://github.com/lavapapa/dsh-composer-layout/actions/workflows/dsh-latest-compat.yml) 会定期用当前 DSH 版本检查插件。
 
 ## 开发
 

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.13 — GitHub release
+
+- Target DSH 0.1.2-rc.1 with GitHub tag `v0.1.13`. This release does not publish to npm or move npm `latest`; query that channel with `npm view dsh-composer-layout version`. Users of older DSH versions can pin 0.1.12.
+- Add Bottom, Right, and Automatic placement. Automatic uses the conversation main area's width-to-height ratio with a configurable threshold of 0.5–2 (default 1), while preserving the minimum width required by both columns.
+- Collapse third-party right-slot controls into an ellipsis popup when space is limited; shift the docking rail left away from the Composer input border and explain why Right is disabled at narrow widths.
+- Adapt to nested conversation scroll containers and bridge scroll events between the host container and Chat. Isolated DSH 0.1.2-rc.1 settings and real-conversation checks passed for split layout, divider dragging, Automatic placement, and narrow-to-wide restoration. The stream-end timing bug was not fully reproduced, so these results do not establish a complete fix; see [release checks](docs/RELEASE_CHECKS.md).
+
 ## 0.1.9 — 2026-08-27
 
 - Make the right-side Composer's native textarea fill the visible short-draft surface, preserving native multi-click and drag selection in unused space.

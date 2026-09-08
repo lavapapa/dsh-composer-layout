@@ -43,4 +43,15 @@ describe('ComposerLayoutSettingsTab', () => {
     renderTab('zh')
     expect(screen.getByRole('img', { name: composerLayoutLocale.zh.guideAlt })).toBeTruthy()
   })
+
+  it('shows the threshold control when automatic placement is selected', () => {
+    localStorage.setItem('dsh.composer-split.settings', JSON.stringify({
+      defaultPlacement: 'auto',
+      autoThreshold: 0.75,
+    }))
+    renderTab('en')
+    expect((screen.getAllByRole('combobox')[0] as HTMLSelectElement).value).toBe('auto')
+    expect(screen.getByRole('slider').getAttribute('value')).toBe('0.75')
+    expect(screen.getByText('0.75')).toBeTruthy()
+  })
 })

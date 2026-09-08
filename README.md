@@ -36,11 +36,12 @@ Docking Composer to the right gives reading and writing separate vertical space.
 
 ## What it adds
 
-- Bottom and right-side Composer placement from **Settings → Plugins → Composer Layout**.
-- A visible docking handle; in the right layout it also resizes the Composer pane.
+- Bottom, Right, and Automatic Composer placement from **Settings → Plugins → Composer Layout**. Automatic uses the main area's width-to-height ratio, with a threshold of 0.5–2 (default 1), and requires enough width for both columns.
+- A docking handle shifted left away from the Composer input border; in the right layout it also resizes the Composer pane. When Right is unavailable, its disabled action explains the width requirement.
 - Per-session placement and manually resized right-pane width when “Remember this session layout” is enabled.
 - When the window cannot fit both columns, temporarily stack the Composer while retaining a layout rail; the remembered right-side layout returns automatically once width is available again.
-- In the right-side layout, close slash/reference candidates before another Composer popup opens, so model, access, and context panels do not overlap them.
+- In the right-side layout, close slash/reference candidates before another Composer popup opens, so model, access, and context panels do not overlap them. Third-party right-slot controls collapse into an ellipsis popup when space is limited.
+- Adapt to DSH's nested conversation scroll containers and bridge scroll events between the host container and Chat. See [release checks](docs/RELEASE_CHECKS.md) for verification scope and the outstanding stream-end timing issue.
 
 The plugin is presentation-only: it does not add model-facing tools, change prompts, or alter token accounting.
 
@@ -48,7 +49,7 @@ The plugin is presentation-only: it does not add model-facing tools, change prom
 
 ### Install from npm
 
-The npm package already contains the prebuilt plugin bundle:
+The npm package contains the prebuilt plugin bundle. Check the npm channel with `npm view dsh-composer-layout version`; GitHub tags and npm releases are separate. The 0.1.13 release targets DSH 0.1.2-rc.1 and is GitHub-only, without changing npm `latest`. Use the GitHub instructions below for that source version; users of older DSH versions can pin `dsh-composer-layout@0.1.12`.
 
 ```sh
 dsh plugin --profile web add dsh-composer-layout@latest
@@ -57,10 +58,10 @@ dsh web --profile web
 
 ### Install directly from GitHub
 
-DSH installs the plugin bundle directly from a GitHub repository; pinning the command to `v0.1.12` makes the installed source explicit and repeatable.
+DSH installs the plugin bundle directly from a GitHub repository; the new release tag is `v0.1.13` for DSH 0.1.2-rc.1. Users of older DSH versions can keep the `v0.1.12` tag.
 
 ```sh
-dsh plugin --profile web add "github:lavapapa/dsh-composer-layout#v0.1.12"
+dsh plugin --profile web add "github:lavapapa/dsh-composer-layout#v0.1.13"
 dsh web --profile web
 ```
 
@@ -74,7 +75,7 @@ dsh --profile web --dump-config
 
 ### Update
 
-To move an existing installation to the current npm release:
+To move an existing installation to the current npm release (check it with `npm view dsh-composer-layout version` first):
 
 ```sh
 dsh plugin --profile web remove dsh-composer-layout
@@ -82,7 +83,7 @@ dsh plugin --profile web add dsh-composer-layout@latest
 dsh web --profile web
 ```
 
-The DSH Web package range supported by the plugin is declared in [`package.json`](package.json). The [DSH compatibility workflow](https://github.com/lavapapa/dsh-composer-layout/actions/workflows/dsh-latest-compat.yml) regularly checks the plugin against the current DSH release.
+Dependency declarations are in [`package.json`](package.json); the DSH versions actually verified are recorded in [release checks](docs/RELEASE_CHECKS.md). The [DSH compatibility workflow](https://github.com/lavapapa/dsh-composer-layout/actions/workflows/dsh-latest-compat.yml) regularly checks the plugin against the current DSH release.
 
 ## Development
 

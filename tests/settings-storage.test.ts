@@ -11,10 +11,10 @@ afterEach(() => { localStorage.clear() })
 describe('session layout storage', () => {
   it('keeps placement and width independent for each conversation', () => {
     writeSessionLayout('session-a', { placement: 'right', width: 520 })
-    writeSessionLayout('session-b', { placement: 'bottom' })
+    writeSessionLayout('session-b', { placement: 'auto' })
 
     expect(readSessionLayout('session-a')).toEqual({ placement: 'right', width: 520 })
-    expect(readSessionLayout('session-b')).toEqual({ placement: 'bottom' })
+    expect(readSessionLayout('session-b')).toEqual({ placement: 'auto' })
   })
 
   it('does not let malformed stored values override a session layout', () => {

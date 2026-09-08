@@ -1,8 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, createEvent, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import type { ReactNode } from 'react'
 import { ComposerSplitAction, type ComposerSplitActionProps } from '../src/client/ComposerSplitAction.tsx'
 
 let measuredWidth = 1_000
+let measuredHeight = 800
+let trailingWidth = 100
 const resizeCallbacks = new Set<() => void>()
 
 class ResizeObserverMock {
@@ -33,14 +36,16 @@ beforeEach(() => {
   vi.stubGlobal('ResizeObserver', ResizeObserverMock)
   vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function () {
     const body = this.hasAttribute('data-conversation-scroll') || this.hasAttribute('data-dsh-composer-split-body')
-    const width = body ? measuredWidth : 100
+    const width = body ? measuredWidth : this.getAttribute('data-testid') === 'input-trailing' ? trailingWidth : 100
     return {
-      x: 0, y: 0, top: 0, left: 0, right: width, bottom: 800,
-      width, height: 800, toJSON: () => ({}),
+      x: 0, y: 0, top: 0, left: 0, right: width, bottom: measuredHeight,
+      width, height: measuredHeight, toJSON: () => ({}),
     }
   })
   localStorage.clear()
   resizeCallbacks.clear()
+  trailingWidth = 100
+  measuredHeight = 800
 })
 
 afterEach(() => {
@@ -49,11 +54,12 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
-function settings(defaultPlacement: 'bottom' | 'right') {
+function settings(defaultPlacement: 'bottom' | 'right' | 'auto') {
   const snapshot = {
     status: 'ready' as const,
     value: {
       defaultPlacement,
+      autoThreshold: 1,
       rememberPlacement: true,
       bottomHandleHoverOnly: false,
       defaultWidthPreset: 'medium' as const,
@@ -72,32 +78,51 @@ function settings(defaultPlacement: 'bottom' | 'right') {
   }
 }
 
-function activeFixture(props: Partial<ComposerSplitActionProps> = {}) {
+type FixtureProps = Partial<ComposerSplitActionProps> & {
+  rightSlotItems?: ReactNode
+  sessionSurface?: boolean
+}
+
+function activeFixture(props: FixtureProps = {}) {
   const {
     sessionId = 'session-a',
     settings: suppliedSettings,
+    rightSlotItems,
+    sessionSurface = true,
     ...actionProps
   } = props
   return (
-    <div data-phase="active">
+    <div data-phase="active"><div data-testid="conversation-body-wrapper">
       <div data-conversation-scroll="">
-        <div data-slot="conversation.session"><div data-testid="chat" /></div>
+        <div {...(sessionSurface ? { 'data-slot': 'conversation.session' } : {})}>
+          {sessionSurface && <div data-testid="chat" />}
+        </div>
         <div data-composer-seat="">
           <div data-composer-card="">
             <div data-input-scroll="">
               <textarea aria-label="给智能体发消息" />
             </div>
-            <button type="button" aria-label="模型" aria-haspopup="menu">模型</button>
-            <button type="button" aria-label="命令" aria-haspopup="listbox">命令</button>
+            <div data-testid="input-row">
+              <div>
+                <button type="button" aria-label="命令" aria-haspopup="listbox">命令</button>
+              </div>
+              <div data-testid="input-trailing">
+                <div data-slot="conversation.input.right">{rightSlotItems}</div>
+                <div data-slot="conversation.input.model">
+                  <button type="button" aria-label="模型" aria-haspopup="menu">模型</button>
+                </div>
+                <button type="button" aria-label="发送">发送</button>
+              </div>
+            </div>
             <ComposerSplitAction sessionId={sessionId} settings={suppliedSettings ?? settings('right')} {...actionProps} />
           </div>
         </div>
       </div>
-    </div>,
+    </div></div>,
   )
 }
 
-function fixture(props: Partial<ComposerSplitActionProps> = {}) {
+function fixture(props: FixtureProps = {}) {
   return render(activeFixture(props))
 }
 
@@ -136,7 +161,7 @@ describe('ComposerSplitAction', () => {
     fireEvent.click(recovery)
     expect(screen.getByRole('toolbar', { name: '输入区域布局' })).toBeTruthy()
     expect(screen.getByRole('button', { name: '停靠到底部' })).toBeTruthy()
-    expect(screen.getByRole('button', { name: '停靠到右侧' }).disabled).toBe(true)
+    expect((screen.getByRole('button', { name: /停靠到右侧/ }) as HTMLButtonElement).disabled).toBe(true)
     expect(view.container.querySelector('[data-dsh-composer-split-active]')).toBeNull()
     expect(view.container.querySelector('[data-dsh-composer-split-pane]')).toBeNull()
   })
@@ -180,6 +205,37 @@ describe('ComposerSplitAction', () => {
     expect(body.hasAttribute('data-conversation-scroll')).toBe(false)
     expect(chat.hasAttribute('data-conversation-scroll')).toBe(true)
     expect(composer.dataset.dshComposerSplitPane).toBe('')
+  })
+
+  it('installs a remembered right layout when DSH mounts the session surface after the Composer', async () => {
+    measuredWidth = 1_000
+    const view = fixture({ sessionSurface: false })
+    await screen.findByRole('separator', { name: /调整输入区域宽度/ })
+    expect(view.container.querySelector('[data-dsh-composer-split-active]')).toBeNull()
+
+    view.rerender(activeFixture({ sessionSurface: true }))
+    await waitFor(() => {
+      expect(view.container.querySelector('[data-dsh-composer-split-active]')).not.toBeNull()
+      expect(view.container.querySelector('[data-dsh-composer-split-pane]')).not.toBeNull()
+    })
+  })
+
+  it('forwards reader scrolls to the host DSH may have observed before a layout change', async () => {
+    measuredWidth = 1_000
+    const view = fixture()
+    const body = view.container.querySelector<HTMLElement>('[data-conversation-scroll]')
+    const chat = view.container.querySelector<HTMLElement>('[data-testid="chat"]')
+    if (body === null || chat === null) throw new Error('fixture scroll hosts are missing')
+    let bodyEvents = 0
+    let chatEvents = 0
+    body.addEventListener('scroll', () => { bodyEvents += 1 })
+    chat.addEventListener('scroll', () => { chatEvents += 1 })
+
+    fireEvent.scroll(chat)
+    fireEvent.scroll(body)
+
+    expect(bodyEvents).toBeGreaterThanOrEqual(2)
+    expect(chatEvents).toBeGreaterThanOrEqual(2)
   })
 
   it('keeps a divider drag inside the shared Composer and Chat width limits', async () => {
@@ -253,6 +309,60 @@ describe('ComposerSplitAction', () => {
     expect(pointerDown.defaultPrevented).toBe(false)
   })
 
+  it('collects extra right-slot controls behind a model-adjacent overflow trigger in the side layout', async () => {
+    measuredWidth = 1_000
+    const view = fixture({
+      rightSlotItems: <>
+        <button type="button" aria-label="加速">加速</button>
+        <button type="button" aria-label="额度">额度</button>
+        <span role="status" aria-label="本周额度"><span data-testid="quota-bar" /></span>
+      </>,
+    })
+    const trigger = await screen.findByRole('button', { name: '显示额外输入控件' })
+    const trailing = view.getByTestId('input-trailing')
+    expect(trigger.parentElement).toBe(trailing)
+    expect(trigger.className).toContain('slotOverflowTrigger')
+    const slot = trailing.querySelector<HTMLElement>('[data-slot="conversation.input.right"]')
+    expect(slot?.dataset.dshComposerSlotOverflow).toBe('')
+
+    fireEvent.click(trigger)
+    await waitFor(() => { expect(slot?.dataset.dshComposerSlotOverflowOpen).toBe('') })
+    expect(screen.getByRole('button', { name: '加速' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: '额度' })).toBeTruthy()
+    expect(screen.getByRole('status', { name: '本周额度' })).toBeTruthy()
+
+    fireEvent.pointerDown(document.body)
+    await waitFor(() => {
+      expect(slot?.dataset.dshComposerSlotOverflowOpen).toBeUndefined()
+      expect(slot?.dataset.dshComposerSlotOverflow).toBe('')
+    })
+  })
+
+  it('keeps third-party right-slot controls visible when the native toolbar has enough width', async () => {
+    measuredWidth = 1_000
+    trailingWidth = 500
+    const view = fixture({
+      rightSlotItems: <button type="button" aria-label="额度">额度</button>,
+    })
+    await screen.findByRole('separator', { name: /调整输入区域宽度/ })
+    const trailing = view.getByTestId('input-trailing')
+    const slot = trailing.querySelector<HTMLElement>('[data-slot="conversation.input.right"]')
+    expect(screen.queryByRole('button', { name: '显示额外输入控件' })).toBeNull()
+    expect(slot?.dataset.dshComposerSlotOverflow).toBeUndefined()
+    expect(screen.getByRole('button', { name: '额度' })).toBeTruthy()
+  })
+
+  it('keeps third-party right-slot controls in the native toolbar outside the side layout', async () => {
+    measuredWidth = 1_000
+    fixture({
+      settings: settings('bottom'),
+      rightSlotItems: <button type="button" aria-label="额度">额度</button>,
+    })
+    await screen.findByRole('button', { name: '打开输入区域布局菜单' })
+    expect(screen.queryByRole('button', { name: '显示额外输入控件' })).toBeNull()
+    expect(screen.getByRole('button', { name: '额度' }).closest('[data-slot="conversation.input.right"]')?.dataset.dshComposerSlotOverflow).toBeUndefined()
+  })
+
   it('records an explicit dock choice for the current session', async () => {
     measuredWidth = 1_000
     fixture({ settings: settings('bottom') })
@@ -264,6 +374,59 @@ describe('ComposerSplitAction', () => {
     expect(JSON.parse(localStorage.getItem('dsh.composer-split.session-layouts') ?? '{}')).toEqual({
       'session-a': { placement: 'right' },
     })
+  })
+
+  it('recomputes automatic placement when only the main-area height changes', async () => {
+    measuredWidth = 1_000
+    const view = fixture({ settings: settings('auto') })
+    await screen.findByRole('separator', { name: /调整输入区域宽度/ })
+    measuredHeight = 1_200
+    notifyResize()
+    await waitFor(() => expect(view.container.querySelector('[data-dsh-composer-split-active]')).toBeNull())
+    measuredHeight = 800
+    notifyResize()
+    await screen.findByRole('separator', { name: /调整输入区域宽度/ })
+    expect(localStorage.getItem('dsh.composer-split.session-layouts')).toBeNull()
+  })
+
+  it('records automatic placement for the current session', async () => {
+    measuredWidth = 1_000
+    fixture({ settings: settings('bottom') })
+    fireEvent.click(await screen.findByRole('button', { name: '打开输入区域布局菜单' }))
+    fireEvent.click(await screen.findByRole('button', { name: /自动选择布局/ }))
+    await screen.findByRole('separator', { name: /调整输入区域宽度/ })
+    expect(JSON.parse(localStorage.getItem('dsh.composer-split.session-layouts') ?? '{}')).toEqual({
+      'session-a': { placement: 'auto' },
+    })
+  })
+
+  it('explains why the right-side action is unavailable in a narrow main area', async () => {
+    measuredWidth = 640
+    fixture()
+    fireEvent.click(await screen.findByRole('button', { name: /窗口过窄/ }))
+    const right = screen.getByRole('button', { name: /停靠到右侧/ })
+    expect((right as HTMLButtonElement).disabled).toBe(true)
+    expect(screen.getByText('至少 680px')).toBeTruthy()
+  })
+
+  it('shows a concise hint for each layout option', async () => {
+    measuredWidth = 1_000
+    fixture({ settings: settings('bottom') })
+    fireEvent.click(await screen.findByRole('button', { name: '打开输入区域布局菜单' }))
+
+    const bottom = screen.getByRole('button', { name: '停靠到底部' })
+    fireEvent.mouseEnter(bottom)
+    expect(screen.getByRole('tooltip').textContent).toBe('固定在底部')
+
+    const right = screen.getByRole('button', { name: '停靠到右侧' })
+    fireEvent.mouseEnter(right)
+    expect(screen.getByRole('tooltip').textContent).toBe('固定在右侧')
+
+    const automatic = screen.getByRole('button', { name: /自动选择布局/ })
+    fireEvent.mouseEnter(automatic)
+    expect(screen.getByRole('tooltip').textContent).toBe('宽幅靠右，窄幅靠下')
+    expect(automatic.querySelector('svg')).not.toBeNull()
+    expect(automatic.textContent).toBe('')
   })
 
   it('restores each session placement when the mounted conversation changes', async () => {

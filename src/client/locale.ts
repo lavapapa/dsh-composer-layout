@@ -8,6 +8,8 @@ export const composerLayoutLocale = {
     guideAlt: 'Use the right-edge rail to switch the Composer layout, then resize the right pane.',
     defaultPlacement: 'Default placement',
     defaultPlacementHint: 'Used when a conversation opens.',
+    autoThreshold: 'Automatic-layout threshold',
+    autoThresholdHint: 'Use the right pane when the main area width divided by its height reaches this value.',
     rememberPlacement: 'Remember this session layout',
     rememberPlacementHint: 'Keep this session’s Composer position and width when you return.',
     bottomHandleHoverOnly: 'Show the bottom handle only on hover',
@@ -19,6 +21,7 @@ export const composerLayoutLocale = {
     wide: 'Wide',
     bottom: 'Bottom',
     right: 'Right',
+    auto: 'Automatic',
   },
   zh: {
     nav: 'Composer 布局',
@@ -29,6 +32,8 @@ export const composerLayoutLocale = {
     guideAlt: '通过右侧白条切换 Composer 布局，并调整右栏宽度。',
     defaultPlacement: '默认位置',
     defaultPlacementHint: '打开会话时使用。',
+    autoThreshold: '自动布局阈值',
+    autoThresholdHint: '当会话主区域的宽度除以高度达到该数值时，自动使用右侧布局。',
     rememberPlacement: '记住当前会话布局',
     rememberPlacementHint: '返回这个会话时保留它的 Composer 位置和宽度。',
     bottomHandleHoverOnly: '上下布局仅在 hover 时显示白条',
@@ -40,6 +45,7 @@ export const composerLayoutLocale = {
     wide: '宽',
     bottom: '底部',
     right: '右侧',
+    auto: '自动',
   },
 } as const
 

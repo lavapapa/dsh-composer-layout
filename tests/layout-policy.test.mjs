@@ -6,6 +6,7 @@ import {
   SIDE_LAYOUT_BREAKPOINT,
   canUseSideLayout,
   clampComposerWidth,
+  resolvePlacement,
 } from '../src/client/layout-policy.js'
 
 test('side layout becomes available exactly when both usable columns fit', () => {
@@ -18,4 +19,14 @@ test('Composer resizing stays within the same responsive limits', () => {
   assert.equal(clampComposerWidth(120, 1_000), MIN_COMPOSER_WIDTH)
   assert.equal(clampComposerWidth(900, 1_000), 680)
   assert.equal(clampComposerWidth(500, 680), MIN_COMPOSER_WIDTH)
+})
+
+test('automatic placement uses the main-area ratio only after both columns fit', () => {
+  assert.equal(resolvePlacement('bottom', 1_000, 500, 1), 'bottom')
+  assert.equal(resolvePlacement('right', 1_000, 1_500, 2), 'right')
+  assert.equal(resolvePlacement('right', 679, 300, 1), 'bottom')
+  assert.equal(resolvePlacement('auto', 679, 300, 1), 'bottom')
+  assert.equal(resolvePlacement('auto', 680, 681, 1), 'bottom')
+  assert.equal(resolvePlacement('auto', 680, 680, 1), 'right')
+  assert.equal(resolvePlacement('auto', 1_000, 500, 2), 'right')
 })
