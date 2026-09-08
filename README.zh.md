@@ -49,7 +49,7 @@
 
 ### 从 npm 安装
 
-npm 包包含预构建好的插件 bundle，可用 `npm view dsh-composer-layout version` 查询 npm 渠道版本。GitHub 标签与 npm 发布彼此独立：0.1.13 针对 DSH 0.1.2-rc.1，本次仅发布到 GitHub，不更新 npm `latest`；安装该源码版本请使用下方 GitHub 命令。旧版 DSH 用户仍可指定 `dsh-composer-layout@0.1.12`。
+npm 包包含预构建好的插件 bundle。0.1.13 已在 DSH **0.1.2-rc.1** 和 **0.1.3-alpha.2** 中通过隔离兼容性测试，这两个版本的用户可以使用同一个插件包；此结论不覆盖未来的 alpha 版本。测试范围与剩余限制见[验收说明](docs/RELEASE_CHECKS.md#0113-release-evidence)。旧版 DSH 用户仍可指定 `dsh-composer-layout@0.1.12`；当前 npm 版本可用 `npm view dsh-composer-layout version` 查询。
 
 ```sh
 dsh plugin --profile web add dsh-composer-layout@latest

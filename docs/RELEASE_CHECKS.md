@@ -50,8 +50,10 @@ Record the DSH version, plugin version, and the result of this browser pass in t
 
 ## 0.1.13 release evidence
 
-The release target is DSH 0.1.2-rc.1 and GitHub tag `v0.1.13`. This release leaves npm `latest` unchanged; use `npm view dsh-composer-layout version` to inspect the npm channel and the [GitHub installation instructions](../README.md#install-directly-from-github) for this source version. Older DSH users can pin 0.1.12.
+Version 0.1.13 targets DSH 0.1.2-rc.1 and has also passed isolated compatibility tests on 0.1.3-alpha.2 without changing the plugin implementation. Use `npm view dsh-composer-layout version` to inspect the npm channel, or follow the [GitHub installation instructions](../README.md#install-directly-from-github). Older DSH users can pin 0.1.12.
 
-In an isolated DSH 0.1.2-rc.1 environment, the settings page and a real conversation passed checks for split layout, divider dragging, Automatic placement, and narrow-to-wide restoration. This evidence applies to those checks on rc.1; it does not establish compatibility with DSH alpha builds or completion of every browser check above.
+On both DSH versions, separate temporary homes and Web profiles passed settings registration and threshold persistence, Hero geometry, restored long-answer rendering, two-column geometry, divider dragging, Bottom/Automatic switching, narrow-width disabling, narrow-to-wide restoration, and settled-answer scrolling. This evidence does not cover future alpha versions or completion of every browser check above.
+
+The alpha.2 test initially failed before Web startup because pnpm dlx had not built DSH's native `fs-ext` session-lock dependency. Allowing that specific dependency with `pnpm --allow-build=fs-ext dlx @deepseek-ai/dsh@0.1.3-alpha.2 …` in the test runner resolved startup; the existing browser checks then passed. The build option was a temporary test-runner adjustment, not a plugin code change.
 
 The stream-end timing bug was not fully reproduced. Nested-container adaptation and scroll-event bridging are included, but the available browser evidence does not establish that the timing bug is completely fixed. A complete stream-end reproduction and verification remain outstanding.
