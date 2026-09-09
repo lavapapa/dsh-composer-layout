@@ -21,7 +21,7 @@ The native editor contract follows the host's contenteditable behavior, not the 
 
 The executable pairing contract is [`scripts/dsh-compat-matrix.json`](../scripts/dsh-compat-matrix.json), keyed by `channel`, `plugin`, `dsh`, and `browser`. Release CI expands all configured pairs independently with `fail-fast: false`. Each pairing runs in Chromium and Playwright WebKit; WebKit coverage does not constitute testing the user's installed Safari browser.
 
-The `legacy` rows install the specified published npm plugin into its historical DSH host. Their baseline comes from the compatibility script at the plugin's historical release tag: installation, browser/plugin loading, native Hero textarea visibility, and unchanged Hero geometry when Right is remembered. This baseline does not cover active-session drafting or selection. These rows do not pack the current tree or require Automatic placement or the newer contenteditable implementation. The `stable` and `alpha` rows pack the working tree and exercise its current feature contract against their explicitly pinned hosts. A new host version is a test target until its run passes, not an automatic extension of an older compatibility claim.
+The `legacy` rows install the specified published npm plugin into its historical DSH host. Before publishing a legacy update, set `DSH_LEGACY_TARBALL` to the maintenance branch’s packed artifact; its version must match the matrix. Their baseline comes from the compatibility script at the plugin's historical release tag: installation, browser/plugin loading, native Hero textarea visibility, and unchanged Hero geometry when Right is remembered. This baseline does not cover active-session drafting or selection. These rows do not pack the current tree or require Automatic placement or the newer contenteditable implementation. The `stable` and `alpha` rows pack the working tree and exercise its current feature contract against their explicitly pinned hosts. A new host version is a test target until its run passes, not an automatic extension of an older compatibility claim.
 
 The scheduled channel probe resolves npm `latest` and `alpha` to concrete DSH versions before building its job matrix. It retains the legacy npm pair and reports each effective plugin/host/browser combination in the job name. A passing probe informs the next reviewed matrix update; it does not rewrite the release matrix or publish a plugin.
 
@@ -33,6 +33,8 @@ DSH_BROWSER=webkit node scripts/test-dsh-legacy-compat.mjs
 DSH_VERSION=<pinned-host-version> DSH_BROWSER=chromium node scripts/test-dsh-compat.mjs
 DSH_VERSION=<pinned-host-version> DSH_BROWSER=webkit node scripts/test-dsh-compat.mjs
 ```
+
+Evaluate all three maintenance targets before publishing, following [AGENTS.md](../AGENTS.md#三个-dsh-版本的变更与发布).
 
 Both test scripts use temporary DSH homes. The legacy script defaults to port 3815 and verifies the installed npm package version; do not run simultaneous tests on the same port. Set `DSH_COMPAT_ARTIFACT_DIR` to keep the screenshots and legacy evidence after the temporary home is cleaned up.
 

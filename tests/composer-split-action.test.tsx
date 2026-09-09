@@ -6,6 +6,8 @@ import { ComposerSplitAction, type ComposerSplitActionProps } from '../src/clien
 let measuredWidth = 1_000
 let measuredHeight = 800
 let trailingWidth = 100
+let naturalTrailingWidth = 300
+let rowCapacity: number | undefined
 const resizeCallbacks = new Set<() => void>()
 
 class ResizeObserverMock {
@@ -36,7 +38,11 @@ beforeEach(() => {
   vi.stubGlobal('ResizeObserver', ResizeObserverMock)
   vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function () {
     const body = this.hasAttribute('data-conversation-scroll') || this.hasAttribute('data-dsh-composer-split-body')
-    const width = body ? measuredWidth : this.getAttribute('data-testid') === 'input-trailing' ? trailingWidth : 100
+    const testId = this.getAttribute('data-testid')
+    const width = body ? measuredWidth
+      : testId === 'input-row' ? (rowCapacity ?? trailingWidth) + 100
+      : testId === 'input-trailing' ? this.hasAttribute('data-dsh-composer-measuring') ? naturalTrailingWidth : trailingWidth
+      : 100
     return {
       x: 0, y: 0, top: 0, left: 0, right: width, bottom: measuredHeight,
       width, height: measuredHeight, toJSON: () => ({}),
@@ -45,6 +51,8 @@ beforeEach(() => {
   localStorage.clear()
   resizeCallbacks.clear()
   trailingWidth = 100
+  naturalTrailingWidth = 300
+  rowCapacity = undefined
   measuredHeight = 800
 })
 
@@ -81,6 +89,7 @@ function settings(defaultPlacement: 'bottom' | 'right' | 'auto') {
 type FixtureProps = Partial<ComposerSplitActionProps> & {
   rightSlotItems?: ReactNode
   sessionSurface?: boolean
+  phase?: 'hero' | 'active'
 }
 
 function activeFixture(props: FixtureProps = {}) {
@@ -89,10 +98,11 @@ function activeFixture(props: FixtureProps = {}) {
     settings: suppliedSettings,
     rightSlotItems,
     sessionSurface = true,
+    phase = 'active',
     ...actionProps
   } = props
   return (
-    <div data-phase="active"><div data-testid="conversation-body-wrapper">
+    <div data-phase={phase}><div data-testid="conversation-body-wrapper">
       <div data-conversation-scroll="">
         <div {...(sessionSurface ? { 'data-slot': 'conversation.session' } : {})}>
           {sessionSurface && <div data-testid="chat" />}
@@ -144,6 +154,37 @@ function heroFixture() {
 }
 
 describe('ComposerSplitAction', () => {
+  it('uses the uncollapsed intrinsic width regardless of the overflow trigger and popup state', async () => {
+    measuredWidth = 1_000
+    trailingWidth = 600
+    rowCapacity = 250
+    const view = fixture({ rightSlotItems: <button type="button" aria-label="额度">额度</button> })
+    const trigger = await screen.findByRole('button', { name: '显示额外输入控件' })
+    fireEvent.click(trigger)
+    for (let i = 0; i < 3; i++) {
+      notifyResize()
+      expect(screen.getByRole('button', { name: '显示额外输入控件' })).toBe(trigger)
+    }
+    expect(view.container.querySelector('[data-dsh-composer-measuring]')).toBeNull()
+    rowCapacity = 500
+    notifyResize()
+    await waitFor(() => expect(screen.queryByRole('button', { name: '显示额外输入控件' })).toBeNull())
+    expect(view.container.querySelector('[data-dsh-composer-slot-overflow]')).toBeNull()
+  })
+
+  it('never folds controls on a new-session page, including after leaving a side-layout session', async () => {
+    measuredWidth = 1_000
+    const rightSlotItems = <button type="button" aria-label="额度">额度</button>
+    const view = fixture({ rightSlotItems })
+    await screen.findByRole('button', { name: '显示额外输入控件' })
+    view.rerender(activeFixture({ phase: 'hero', sessionId: 'new-session', sessionSurface: false, rightSlotItems }))
+    await waitFor(() => expect(screen.queryByRole('button', { name: '显示额外输入控件' })).toBeNull())
+    expect(view.container.querySelector('[data-dsh-composer-slot-overflow]')).toBeNull()
+    notifyResize()
+    fireEvent.pointerDown(screen.getByRole('button', { name: '模型' }))
+    expect(screen.queryByRole('button', { name: '显示额外输入控件' })).toBeNull()
+  })
+
   it('does not apply side-layout input sizing on the Hero page', async () => {
     measuredWidth = 1_000
     const view = heroFixture()

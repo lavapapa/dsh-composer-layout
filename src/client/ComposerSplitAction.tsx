@@ -58,6 +58,7 @@ interface MenuAnchor {
 }
 
 interface RightSlotOverflow {
+  row: HTMLElement
   trailing: HTMLElement
   slot: HTMLElement
   items: HTMLElement[]
@@ -153,12 +154,12 @@ function findRightSlotOverflow(composer: HTMLElement): RightSlotOverflow | null 
   const scrollport = composer.querySelector<HTMLElement>('[data-input-scroll]')
   const row = scrollport?.nextElementSibling
   const trailing = row?.lastElementChild
-  if (!(trailing instanceof HTMLElement)) return null
+  if (!(row instanceof HTMLElement) || !(trailing instanceof HTMLElement)) return null
 
   const slot = trailing.querySelector<HTMLElement>(':scope > [data-slot="conversation.input.right"]')
   if (slot === null) return null
   const items = Array.from(slot.children).filter((child): child is HTMLElement => child instanceof HTMLElement)
-  return items.length === 0 ? null : { trailing, slot, items }
+  return items.length === 0 ? null : { row, trailing, slot, items }
 }
 
 function visualWidth(element: HTMLElement): number {
@@ -170,16 +171,21 @@ function visualWidth(element: HTMLElement): number {
 }
 
 function shouldCollapseRightSlot(overflow: RightSlotOverflow): boolean {
-  const { trailing, slot } = overflow
-  const capacity = trailing.clientWidth || trailing.getBoundingClientRect().width
+  const { row, trailing } = overflow
+  const leading = Array.from(row.children).filter((child): child is HTMLElement => child instanceof HTMLElement && child !== trailing)
+  const gap = Number.parseFloat(getComputedStyle(row).columnGap) || 0
+  const capacity = row.getBoundingClientRect().width
+    - leading.reduce((total, child) => total + child.getBoundingClientRect().width, 0)
+    - gap * leading.length
   if (capacity <= 0) return false
-  const siblingWidth = Array.from(trailing.children)
-    .filter((child): child is HTMLElement => child instanceof HTMLElement)
-    .filter(child => child !== slot && !child.hasAttribute('data-dsh-composer-slot-overflow-trigger'))
-    .reduce((total, child) => total + visualWidth(child), 0)
-  const gap = Number.parseFloat(getComputedStyle(trailing).columnGap) || 8
-  const controls = siblingWidth + visualWidth(slot)
-  return controls + gap * Math.max(0, trailing.children.length - 1) > capacity
+  // Measure the same uncollapsed, intrinsic layout every time. The overflow
+  // trigger and flex shrinking must not participate in the decision they cause.
+  trailing.dataset.dshComposerMeasuring = ''
+  try {
+    return trailing.getBoundingClientRect().width > capacity
+  } finally {
+    delete trailing.dataset.dshComposerMeasuring
+  }
 }
 
 function clearSlotOverflow(slot: HTMLElement | null): void {
@@ -227,6 +233,7 @@ export function ComposerSplitAction({ settings, sessionId, dismissInputTrigger }
   const [split, setSplit] = useState(false)
   const [composerWidth, setComposerWidth] = useState(DEFAULT_WIDTH)
   const [bodyRect, setBodyRect] = useState<BodyRect | null>(null)
+  const [active, setActive] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const [sideMenuAnchor, setSideMenuAnchor] = useState<MenuAnchor | null>(null)
   const [toolbarHint, setToolbarHint] = useState<string | null>(null)
@@ -264,7 +271,7 @@ export function ComposerSplitAction({ settings, sessionId, dismissInputTrigger }
       ? remembered.placement
       : preferences.defaultPlacement
     setPlacementIntent(placement)
-    setSplit(resolvePlacement(placement, bodyRect.width, bodyRect.height, preferences.autoThreshold) === 'right')
+    setSplit(active && resolvePlacement(placement, bodyRect.width, bodyRect.height, preferences.autoThreshold) === 'right')
 
     if (appliedPresetRef.current === preferences.defaultWidthPreset) return
     appliedPresetRef.current = preferences.defaultWidthPreset
@@ -277,7 +284,7 @@ export function ComposerSplitAction({ settings, sessionId, dismissInputTrigger }
     } else {
       setComposerWidth(widthForPreset(preferences.defaultWidthPreset, bodyRect.width))
     }
-  }, [bodyRect, preferences])
+  }, [active, bodyRect, preferences])
 
   useEffect(() => {
     const root = ownerRef.current?.root
@@ -292,6 +299,10 @@ export function ComposerSplitAction({ settings, sessionId, dismissInputTrigger }
     const owner = findOwner(control)
     if (owner === null) return
     ownerRef.current = owner
+    const updatePhase = (): void => { setActive(owner.root.dataset.phase === 'active') }
+    updatePhase()
+    const phaseObserver = new MutationObserver(updatePhase)
+    phaseObserver.observe(owner.root, { attributes: true, attributeFilter: ['data-phase'] })
     setBodyRect(rectOf(owner.body))
 
     const observer = new ResizeObserver(() => {
@@ -303,6 +314,7 @@ export function ComposerSplitAction({ settings, sessionId, dismissInputTrigger }
     observer.observe(owner.body)
     return () => {
       observer.disconnect()
+      phaseObserver.disconnect()
       ownerRef.current = null
       setBodyRect(null)
     }
@@ -343,7 +355,7 @@ export function ComposerSplitAction({ settings, sessionId, dismissInputTrigger }
   // width would force the native toolbar into a second row.
   useLayoutEffect(() => {
     const composer = ownerRef.current?.composer
-    if (!split || composer === undefined) {
+    if (!active || !split || composer === undefined || ownerRef.current?.root.dataset.phase !== 'active') {
       clearSlotOverflow(rightSlotOverflowSlotRef.current)
       rightSlotOverflowSlotRef.current = null
       setRightSlotOverflow(null)
@@ -353,6 +365,7 @@ export function ComposerSplitAction({ settings, sessionId, dismissInputTrigger }
     }
 
     const refresh = (): void => {
+      if (ownerRef.current?.root.dataset.phase !== 'active') return
       const next = findRightSlotOverflow(composer)
       const previous = rightSlotOverflowSlotRef.current
       if (previous !== null && previous !== next?.slot) clearSlotOverflow(previous)
@@ -374,10 +387,9 @@ export function ComposerSplitAction({ settings, sessionId, dismissInputTrigger }
     const mutationObserver = new MutationObserver(refresh)
     const resizeObserver = new ResizeObserver(refresh)
     mutationObserver.observe(composer, { childList: true, subtree: true })
-    resizeObserver.observe(composer)
     const current = findRightSlotOverflow(composer)
     if (current !== null) {
-      resizeObserver.observe(current.trailing)
+      resizeObserver.observe(current.row)
       resizeObserver.observe(current.slot)
     }
     return () => {
@@ -386,7 +398,7 @@ export function ComposerSplitAction({ settings, sessionId, dismissInputTrigger }
       clearSlotOverflow(rightSlotOverflowSlotRef.current)
       rightSlotOverflowSlotRef.current = null
     }
-  }, [split, sessionId])
+  }, [active, split, sessionId])
 
   useLayoutEffect(() => {
     if (rightSlotOverflowOpen) return
@@ -459,7 +471,7 @@ export function ComposerSplitAction({ settings, sessionId, dismissInputTrigger }
 
   useLayoutEffect(() => {
     const control = controlRef.current
-    if (!split || !canUseSideLayout(bodyRect?.width ?? 0) || control === null) return
+    if (!active || !split || !canUseSideLayout(bodyRect?.width ?? 0) || control === null) return
     let dispose: (() => void) | undefined
     let observer: MutationObserver | undefined
     const install = (): void => {
@@ -489,7 +501,7 @@ export function ComposerSplitAction({ settings, sessionId, dismissInputTrigger }
       legacyRef.current = null
       dispose?.()
     }
-  }, [bodyRect?.width, split])
+  }, [active, bodyRect?.width, split])
 
   useEffect(() => {
     const owner = ownerRef.current
@@ -717,7 +729,7 @@ export function ComposerSplitAction({ settings, sessionId, dismissInputTrigger }
     })
     : null
 
-  const rightSlotOverflowTrigger = split && rightSlotCollapsed && rightSlotOverflow !== null
+  const rightSlotOverflowTrigger = active && split && rightSlotCollapsed && rightSlotOverflow !== null
     ? createPortal(
       <button
         ref={rightSlotOverflowTriggerRef}

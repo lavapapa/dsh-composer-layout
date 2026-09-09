@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.17
+
+- Publish the same verified artifact through `latest` for DSH 0.1.2-rc.1 and `alpha` for DSH 0.1.5-alpha.1. Both host versions passed Chromium and WebKit compatibility checks; the reported Dia freeze was confirmed resolved by the user on the current RC.
+- Assess the previous RC separately: its textarea-based plugin has no overflow folding, but lacked phase cleanup. The `legacy` maintenance release adds that cleanup without introducing current-host editor changes.
+- Add the three-target change and release requirements to AGENTS.md and allow the legacy compatibility test to install a pre-publication tarball.
+
+- Keep new-session pages in the native layout and stop extra-control folding when returning from an active session.
+- Measure toolbar capacity against its parent row and compare the intrinsic, fully expanded controls with the overflow trigger excluded, so folding cannot change its own width calculation.
+
 ## 0.1.16
 
 - Add a shared plugin/DSH/browser pairing matrix and `pnpm test:dsh-matrix`. The legacy npm plugin 0.1.12 is tested with DSH 0.1.1-rc.2; this release is tested with DSH 0.1.2-rc.1 and 0.1.5-alpha.1. Every pair runs in Chromium and WebKit.

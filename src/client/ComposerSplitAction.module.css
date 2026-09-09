@@ -380,3 +380,23 @@
   visibility: visible;
   pointer-events: auto;
 }
+
+/* A synchronous measurement restores these rules before the next paint. */
+:global([data-dsh-composer-measuring]) {
+  flex: none !important;
+  width: max-content !important;
+  min-width: 0 !important;
+  max-width: none !important;
+}
+
+:global([data-dsh-composer-measuring] > [data-dsh-composer-slot-overflow-trigger]) {
+  display: none !important;
+}
+
+:global([data-composer-seat] [data-dsh-composer-measuring] > [data-slot='conversation.input.right']) {
+  position: static !important;
+  flex: none !important;
+  width: max-content !important;
+  padding: 0 !important;
+  border: 0 !important;
+}

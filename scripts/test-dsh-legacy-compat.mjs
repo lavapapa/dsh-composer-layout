@@ -18,7 +18,7 @@ const home = await mkdtemp(join(tmpdir(), 'dsh-composer-layout-legacy-'))
 const environment = { ...process.env, DSH_HOME: home, DSH_TELEMETRY_DISABLED: '1' }
 const artifactDirectory = process.env.DSH_COMPAT_ARTIFACT_DIR
 const cli = ['--allow-build=fs-ext', 'dlx', `@deepseek-ai/dsh@${pair.dsh}`]
-const evidence = { plugin: pair.plugin, dsh: pair.dsh, browser: browserName, source: 'npm', samples: [] }
+const evidence = { plugin: pair.plugin, dsh: pair.dsh, browser: browserName, source: process.env.DSH_LEGACY_TARBALL === undefined ? 'npm' : 'tarball', samples: [] }
 function dsh(args) {
   return spawnSync('pnpm', [...cli, ...args], { cwd: root, encoding: 'utf8', env: environment })
 }
@@ -29,8 +29,8 @@ function checked(result) {
 let server
 let browser
 try {
-  // 旧配对始终安装已发布 npm 包，当前工作树不会参与打包或安装。
-  checked(dsh(['plugin', '--profile', 'web', 'add', `dsh-composer-layout@${pair.plugin}`]))
+  // 发版前可验证旧维护分支的待发布包；日常矩阵安装明确指定的 npm 版本。
+  checked(dsh(['plugin', '--profile', 'web', 'add', process.env.DSH_LEGACY_TARBALL ?? `dsh-composer-layout@${pair.plugin}`]))
   const installed = JSON.parse(await readFile(join(home, 'profiles/web/node_modules/dsh-composer-layout/package.json'), 'utf8'))
   assert.equal(installed.version, pair.plugin)
   const config = checked(dsh(['--profile', 'web', '--dump-config']))
@@ -79,7 +79,7 @@ try {
     } finally { await context.close() }
   }
   assert.ok(evidence.samples[1].height >= evidence.samples[0].height * 0.95, 'Remembered Right must not collapse legacy Hero')
-  console.log(`verified published dsh-composer-layout@${pair.plugin} + DSH ${pair.dsh} (${browserName}): isolated npm installation, browser loading, native Hero textarea and remembered-Right geometry; active-session editing is outside this historical baseline`)
+  console.log(`verified ${evidence.source} dsh-composer-layout@${pair.plugin} + DSH ${pair.dsh} (${browserName}): isolated npm installation, browser loading, native Hero textarea and remembered-Right geometry; active-session editing is outside this historical baseline`)
 } finally {
   if (artifactDirectory !== undefined) {
     await mkdir(artifactDirectory, { recursive: true })
