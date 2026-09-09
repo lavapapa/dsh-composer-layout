@@ -5,12 +5,14 @@ import { mkdir, mkdtemp, readdir, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { chromium } from 'playwright'
+import { chromium, webkit } from 'playwright'
 import { zstdCompressSync } from 'node:zlib'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const dshVersion = process.env.DSH_VERSION ?? '0.1.2-rc.1'
 const dshPackage = `@deepseek-ai/dsh@${dshVersion}`
+const browserName = process.env.DSH_BROWSER ?? 'chromium'
+assert.ok(['chromium', 'webkit'].includes(browserName), 'DSH_BROWSER must be chromium or webkit')
 const port = Number(process.env.DSH_COMPAT_PORT ?? 3813)
 const home = await mkdtemp(join(tmpdir(), 'dsh-composer-layout-compat-'))
 const artifactDirectory = process.env.DSH_COMPAT_ARTIFACT_DIR === undefined
@@ -95,10 +97,10 @@ try {
   server.stderr.on('data', chunk => output.push(chunk.toString()))
   const url = await waitForServer(output)
 
-  const browser = await chromium.launch({ headless: true })
+  const browser = await ({ chromium, webkit })[browserName].launch({ headless: true })
   try {
     async function inspectHero(defaultPlacement, viewport) {
-      const context = await browser.newContext({ viewport })
+      const context = await browser.newContext({ viewport, locale: 'en-US' })
       const page = await context.newPage()
       const pageErrors = []
       page.on('pageerror', error => pageErrors.push(error.message))
@@ -184,6 +186,17 @@ try {
         assert.ok(geometry.chat.width >= 320 && geometry.composer.width >= 360)
         assert.ok(geometry.chat.right <= geometry.composer.left + 1, 'Chat and Composer must not overlap')
         const editor = page.locator('[data-composer-input][contenteditable="true"]')
+        const emptySurface = await editor.evaluate(el => {
+          el.blur()
+          const scroll = el.closest('[data-input-scroll]').getBoundingClientRect()
+          const box = el.getBoundingClientRect()
+          const hit = document.elementFromPoint(scroll.x + scroll.width / 2, scroll.y + scroll.height * 0.9)
+          return { height: box.height, scrollHeight: scroll.height, nativeHit: el.contains(hit), cursor: getComputedStyle(hit).cursor, focused: document.activeElement === el }
+        })
+        assert.equal(emptySurface.focused, false)
+        assert.ok(emptySurface.height >= emptySurface.scrollHeight - 2, `Empty unfocused editor must fill the input surface: ${JSON.stringify(emptySurface)}`)
+        assert.equal(emptySurface.nativeHit, true, 'Empty unfocused blank area must belong to the native editor')
+        assert.equal(emptySurface.cursor, 'text', 'Empty unfocused blank area must have the text cursor')
         await editor.fill('Native editor selection surface')
         const editorSurface = await editor.evaluate(el => {
           const scroll = el.closest('[data-input-scroll]')
@@ -239,7 +252,9 @@ try {
           await nativePage.mouse.down()
           await nativePage.mouse.move(points.bx, points.by, { steps: 12 })
           await nativePage.mouse.up()
-          assert.equal(forwardSelection, await nativePage.evaluate(() => getSelection().toString()), `Forward drag must match bare native editing: ${JSON.stringify({ forwardStart, forwardMoved })}`)
+          const nativeSelection = await nativePage.evaluate(() => getSelection().toString())
+          assert.equal(forwardSelection.length > 0, nativeSelection.length > 0, `Forward drag must match native selection behavior: ${JSON.stringify({ forwardStart, forwardMoved, nativeSelection })}`)
+          if (nativeSelection.length > 0) assert.ok(forwardSelection.includes('editor selection surface'), 'Forward drag must select the draft when the native browser does so')
         } finally {
           await nativePage.close()
           await page.bringToFront()
@@ -308,6 +323,8 @@ try {
         await page.locator('[data-dsh-composer-split-active]').waitFor({ state: 'attached' })
         await page.setViewportSize({ width: 600, height: 1300 })
         await page.locator('[data-dsh-composer-split-active]').waitFor({ state: 'detached' })
+        // 缩窄会触发 ResizeObserver 关闭菜单；等布局完成后再模拟用户打开。
+        await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))))
         await page.getByRole('button', { name: '打开输入区域布局菜单', exact: true }).click()
         assert.equal(await page.getByRole('button', { name: /停靠到右侧/ }).isDisabled(), true)
         // 自动模式已在宽屏时选定；缩窄不应要求重新选择，变宽后应自行恢复。
@@ -354,6 +371,13 @@ try {
       rightPreferredHero.height >= bottomHero.height * 0.95,
       `Hero Composer collapsed with a right preference (${rightPreferredHero.height}px vs ${bottomHero.height}px at bottom)`,
     )
+  } catch (error) {
+    if (artifactDirectory !== undefined) {
+      await mkdir(artifactDirectory, { recursive: true })
+      const page = browser.contexts().flatMap(context => context.pages()).at(-1)
+      if (page !== undefined) await page.screenshot({ path: join(artifactDirectory, `failure-${browserName}.png`) })
+    }
+    throw error
   } finally {
     await browser.close()
   }

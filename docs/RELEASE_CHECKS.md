@@ -17,6 +17,25 @@ The plugin owns presentation and interaction around the DSH Composer. It does no
 
 The native editor contract follows the host's contenteditable behavior, not the removed textarea implementation. Pointer tests require word/paragraph selection and nonempty selection when dragging from blank space into text. Dragging from text into distant blank space is compared against a bare native contenteditable in the same browser: Chromium can collapse this selection in both, so that outcome alone is not attributed to the plugin.
 
+## Version-paired browser checks
+
+The executable pairing contract is [`scripts/dsh-compat-matrix.json`](../scripts/dsh-compat-matrix.json), keyed by `channel`, `plugin`, `dsh`, and `browser`. Release CI expands all configured pairs independently with `fail-fast: false`. Each pairing runs in Chromium and Playwright WebKit; WebKit coverage does not constitute testing the user's installed Safari browser.
+
+The `legacy` rows install the specified published npm plugin into its historical DSH host. Their baseline comes from the compatibility script at the plugin's historical release tag: installation, browser/plugin loading, native Hero textarea visibility, and unchanged Hero geometry when Right is remembered. This baseline does not cover active-session drafting or selection. These rows do not pack the current tree or require Automatic placement or the newer contenteditable implementation. The `stable` and `alpha` rows pack the working tree and exercise its current feature contract against their explicitly pinned hosts. A new host version is a test target until its run passes, not an automatic extension of an older compatibility claim.
+
+The scheduled channel probe resolves npm `latest` and `alpha` to concrete DSH versions before building its job matrix. It retains the legacy npm pair and reports each effective plugin/host/browser combination in the job name. A passing probe informs the next reviewed matrix update; it does not rewrite the release matrix or publish a plugin.
+
+To run one pair locally, use the `script` and `dsh` values from the matrix:
+
+```sh
+DSH_BROWSER=chromium node scripts/test-dsh-legacy-compat.mjs
+DSH_BROWSER=webkit node scripts/test-dsh-legacy-compat.mjs
+DSH_VERSION=<pinned-host-version> DSH_BROWSER=chromium node scripts/test-dsh-compat.mjs
+DSH_VERSION=<pinned-host-version> DSH_BROWSER=webkit node scripts/test-dsh-compat.mjs
+```
+
+Both test scripts use temporary DSH homes. The legacy script defaults to port 3815 and verifies the installed npm package version; do not run simultaneous tests on the same port. Set `DSH_COMPAT_ARTIFACT_DIR` to keep the screenshots and legacy evidence after the temporary home is cleaned up.
+
 ## Required checks for every update
 
 Run the following from the repository root:
@@ -26,10 +45,11 @@ pnpm install --frozen-lockfile
 pnpm typecheck
 pnpm build
 pnpm test
-pnpm test:dsh-compat
+pnpm exec playwright install chromium webkit
+pnpm test:dsh-matrix
 ```
 
-`pnpm test` covers the responsive width policy, per-session storage, DOM ownership while switching layouts, width clamping, popup interaction, native pointer-event non-interference, and the settings guide. `pnpm test:dsh-compat` packs the exact working tree, installs that tarball into a fresh DSH Web profile, starts DSH, and checks the real Home Hero, plugin settings, and an active conversation. It verifies Hero geometry at desktop and narrow widths, conversation split widths and resizing, Automatic placement, the disabled Right action, and scrolling after the layout has settled. Native editor checks cover short-draft height, blank-area hit testing and text cursor, real pointer focus and selection, independent long-draft wheel scrolling, and restoration of the compact bottom editor. A remembered Right preference must never turn the Hero into a split pane, clip its input, or create horizontal overflow. The workflow stores those browser screenshots as CI artifacts, so a geometry failure can be inspected visually. Its default target is the supported DSH version; set `DSH_VERSION=latest` to check the newest published DSH package. The scheduled GitHub workflow runs that latest-version check weekly.
+`pnpm test` covers the responsive width policy, per-session storage, DOM ownership while switching layouts, width clamping, popup interaction, native pointer-event non-interference, and the settings guide. `pnpm test:dsh-compat` packs the exact working tree, installs that tarball into a fresh DSH Web profile, starts DSH, and checks the real Home Hero, plugin settings, and an active conversation. It verifies Hero geometry at desktop and narrow widths, conversation split widths and resizing, Automatic placement, the disabled Right action, and scrolling after the layout has settled. Native editor checks cover short-draft height, blank-area hit testing and text cursor, real pointer focus and selection, independent long-draft wheel scrolling, and restoration of the compact bottom editor. A remembered Right preference must never turn the Hero into a split pane, clip its input, or create horizontal overflow. The workflow stores those browser screenshots as CI artifacts, so a geometry failure can be inspected visually. A local invocation checks one host/browser combination. Release acceptance requires every configured version/browser pair above, including the separately installed historical npm pair. The scheduled workflow additionally probes the current npm stable and alpha channels weekly.
 
 | Test layer | Catches automatically | Leaves to a real browser pass |
 | --- | --- | --- |

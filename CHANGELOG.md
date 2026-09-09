@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.16
+
+- Add a shared plugin/DSH/browser pairing matrix and `pnpm test:dsh-matrix`. The legacy npm plugin 0.1.12 is tested with DSH 0.1.1-rc.2; this release is tested with DSH 0.1.2-rc.1 and 0.1.5-alpha.1. Every pair runs in Chromium and WebKit.
+- Extend browser tests to empty unfocused editing surfaces and normalize native selection checks across engines. Legacy coverage remains installation, plugin loading, and Hero geometry; current stable/alpha coverage includes active-session editing, selection, and scrolling.
+- Expand release CI and scheduled channel probes to the paired browser matrix. This release updates testing and compatibility evidence, retaining the 0.1.15 runtime implementation; it does not add a separate Safari patch.
+
 ## 0.1.15
 
 - Restore the full-height native contenteditable surface in the right-side Composer, replacing obsolete textarea/mirror sizing and the blank-area focus proxy. Editable blank space now belongs to the native editor and uses a text cursor.
