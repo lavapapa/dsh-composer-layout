@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.15
+
+- Restore the full-height native contenteditable surface in the right-side Composer, replacing obsolete textarea/mirror sizing and the blank-area focus proxy. Editable blank space now belongs to the native editor and uses a text cursor.
+- Add real-browser checks for short-draft geometry, blank-area hit testing, pointer focus, word/paragraph selection, native drag behavior, independent long-draft wheel scrolling, and compact Bottom/Hero behavior.
+- Verify the same implementation on DSH 0.1.2-rc.1 and 0.1.3-alpha.2. Native contenteditable selection follows the browser, including its distant-blank-space drag behavior; this release does not claim a fix for intermittently disappearing questions or stream-end scrolling.
+
 ## 0.1.14
 
 - Prevent DSH's native transcript-width handles from overlapping the right-side Composer by hiding both handles while split layout is active. Chat uses the available left-column width, adjusted with the plugin divider; independent transcript whitespace adjustment is unavailable in this mode.

@@ -100,7 +100,7 @@ function activeFixture(props: FixtureProps = {}) {
         <div data-composer-seat="">
           <div data-composer-card="">
             <div data-input-scroll="">
-              <textarea aria-label="给智能体发消息" />
+              <div><div contentEditable data-composer-input="" role="textbox" aria-label="给智能体发消息" /></div>
             </div>
             <div data-testid="input-row">
               <div>
@@ -133,7 +133,7 @@ function heroFixture() {
         <div data-composer-seat="">
           <div data-composer-card="">
             <div data-input-scroll="">
-              <textarea aria-label="给智能体发消息" />
+              <div><div contentEditable data-composer-input="" role="textbox" aria-label="给智能体发消息" /></div>
             </div>
             <ComposerSplitAction sessionId="new-session" settings={settings('right')} />
           </div>
@@ -288,18 +288,20 @@ describe('ComposerSplitAction', () => {
     expect(dismiss).toHaveBeenCalledTimes(1)
   })
 
-  it('focuses the draft when its right-side blank scroll area is clicked', async () => {
+  it('does not replace native input gestures with a blank-area focus proxy', async () => {
     measuredWidth = 1_000
     fixture()
     await screen.findByRole('separator', { name: /调整输入区域宽度/ })
     const input = screen.getByRole('textbox', { name: '给智能体发消息' })
     const blankArea = input.parentElement
     if (blankArea === null) throw new Error('fixture input scroll area is missing')
-    fireEvent.pointerDown(blankArea, { button: 0 })
-    expect(document.activeElement).toBe(input)
+    const pointerDown = createEvent.pointerDown(blankArea, { button: 0 })
+    fireEvent(blankArea, pointerDown)
+    expect(pointerDown.defaultPrevented).toBe(false)
+    expect(document.activeElement).not.toBe(input)
   })
 
-  it('leaves native pointer gestures on the right-side textarea untouched', async () => {
+  it('leaves native pointer gestures on the right-side contenteditable untouched', async () => {
     measuredWidth = 1_000
     fixture()
     await screen.findByRole('separator', { name: /调整输入区域宽度/ })

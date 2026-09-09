@@ -206,7 +206,7 @@
 
 /* The current DSH InputBar wraps its card in an unmarked flex column. Giving
    the card flex growth without first sizing that wrapper collapses the card to
-   its padding, then lets the textarea scrollport overflow out of the pane.
+   its padding, then lets the editor scrollport overflow out of the pane.
    Target every real layout ancestor in the Composer chain, rather than a
    private class or a data attribute DSH does not publish. */
 :global([data-dsh-composer-split-pane] :has([data-composer-card])),
@@ -294,14 +294,22 @@
   justify-content: flex-end;
 }
 
-/* DSH sizes its textarea from the mirror layer inside the scrollport. The
-   right pane deliberately gives that scrollport the remaining height; make
-   the mirror stack fill the same space for a short draft too, so the native
-   textarea receives pointer and selection gestures everywhere users see an
-   input surface. A long draft still enlarges the stack beyond this minimum
-   and keeps the scrollport as DSH's single scrolling owner. */
-:global([data-dsh-composer-split-pane] [data-input-scroll] > :has(> [data-input-mirror])) {
-  min-height: 100%;
+/* The native contenteditable and its wrapper share the scrollport's spare
+   height. Neither shrinks below its text content, so long drafts still scroll
+   in DSH's input scrollport; empty space belongs to the editor itself. */
+:global([data-dsh-composer-split-pane] [data-input-scroll]),
+:global([data-dsh-composer-split-pane] [data-input-scroll] > :has(> [data-composer-input])) {
+  display: flex;
+  flex-direction: column;
+}
+
+:global([data-dsh-composer-split-pane] [data-input-scroll] > :has(> [data-composer-input])),
+:global([data-dsh-composer-split-pane] [data-composer-input]) {
+  flex: 1 0 auto;
+}
+
+:global([data-dsh-composer-split-pane] [data-composer-input][contenteditable='true']) {
+  cursor: text;
 }
 
 /* DSH positions model, access, slash, and reference popups from their own

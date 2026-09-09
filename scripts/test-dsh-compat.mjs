@@ -183,6 +183,99 @@ try {
         assert.equal(geometry.display, 'grid')
         assert.ok(geometry.chat.width >= 320 && geometry.composer.width >= 360)
         assert.ok(geometry.chat.right <= geometry.composer.left + 1, 'Chat and Composer must not overlap')
+        const editor = page.locator('[data-composer-input][contenteditable="true"]')
+        await editor.fill('Native editor selection surface')
+        const editorSurface = await editor.evaluate(el => {
+          const scroll = el.closest('[data-input-scroll]')
+          const box = el.getBoundingClientRect()
+          const area = scroll.getBoundingClientRect()
+          return { editor: box.toJSON(), scroll: area.toJSON(), mirrorCount: scroll.querySelectorAll('[data-input-mirror]').length, ancestors: [el, el.parentElement, scroll].map(e => ({ tag: e.tagName, height: e.getBoundingClientRect().height, display: getComputedStyle(e).display, minHeight: getComputedStyle(e).minHeight })) }
+        })
+        assert.ok(editorSurface.editor.height >= editorSurface.scroll.height - 2, `Short draft must fill the native editing surface: ${JSON.stringify(editorSurface)}`)
+        for (const fraction of [0.5, 0.9]) {
+          const x = editorSurface.scroll.x + editorSurface.scroll.width / 2
+          const y = editorSurface.scroll.y + editorSurface.scroll.height * fraction
+          assert.equal(await editor.evaluate((el, point) => el.contains(document.elementFromPoint(point.x, point.y)), { x, y }), true, 'Blank input area must hit the native editor, not a focus proxy')
+          assert.equal(await page.evaluate(point => getComputedStyle(document.elementFromPoint(point.x, point.y)).cursor, { x, y }), 'text', 'Blank native input area must show the text cursor')
+        }
+        // 真实鼠标操作验证浏览器原生光标与选择，不能用脚本设置 Selection 代替。
+        const textPoint = await editor.evaluate(el => {
+          const text = document.createTreeWalker(el, NodeFilter.SHOW_TEXT).nextNode()
+          const range = document.createRange()
+          range.setStart(text, 0)
+          range.setEnd(text, 1)
+          const rect = range.getBoundingClientRect()
+          return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 }
+        })
+        const blankPoint = { x: editorSurface.scroll.x + editorSurface.scroll.width / 2, y: editorSurface.scroll.y + editorSurface.scroll.height * 0.9 }
+        await page.mouse.click(blankPoint.x, blankPoint.y)
+        assert.equal(await editor.evaluate(el => document.activeElement === el), true, 'Blank-area click must focus the native editor without a proxy')
+        await page.mouse.move(textPoint.x, textPoint.y)
+        await page.mouse.down()
+        const forwardStart = await page.evaluate(() => ({ anchor: getSelection().anchorOffset, focus: getSelection().focusOffset, text: getSelection().toString() }))
+        await page.mouse.move(blankPoint.x, blankPoint.y, { steps: 12 })
+        const forwardMoved = await page.evaluate(() => ({ anchor: getSelection().anchorOffset, focus: getSelection().focusOffset, text: getSelection().toString() }))
+        await page.mouse.up()
+        // Chromium also collapses this forward drag over distant empty space in
+        // a bare contenteditable. Compare native behavior rather than inventing
+        // textarea selection semantics; the reverse drag below must select text.
+        const forwardSelection = await page.evaluate(() => getSelection().toString())
+        const nativePage = await context.newPage()
+        try {
+          await nativePage.setViewportSize({ width: 1920, height: 900 })
+          await nativePage.setContent('<div contenteditable="true">Native editor selection surface</div>')
+          const nativeEditor = nativePage.locator('[contenteditable]')
+          const font = await editor.evaluate(el => getComputedStyle(el).font)
+          const points = await nativeEditor.evaluate((el, { width, height, font }) => {
+            Object.assign(el.style, { width: `${width}px`, height: `${height}px`, font, whiteSpace: 'pre-wrap' })
+            const range = document.createRange()
+            range.setStart(el.firstChild, 0)
+            range.setEnd(el.firstChild, 1)
+            const text = range.getBoundingClientRect(), box = el.getBoundingClientRect()
+            return { x: text.x + text.width / 2, y: text.y + text.height / 2, bx: box.x + box.width / 2, by: box.y + box.height * 0.9 }
+          }, { width: editorSurface.editor.width, height: editorSurface.editor.height, font })
+          await nativePage.mouse.click(points.bx, points.by)
+          await nativePage.mouse.move(points.x, points.y)
+          await nativePage.mouse.down()
+          await nativePage.mouse.move(points.bx, points.by, { steps: 12 })
+          await nativePage.mouse.up()
+          assert.equal(forwardSelection, await nativePage.evaluate(() => getSelection().toString()), `Forward drag must match bare native editing: ${JSON.stringify({ forwardStart, forwardMoved })}`)
+        } finally {
+          await nativePage.close()
+          await page.bringToFront()
+        }
+        await page.mouse.click(blankPoint.x, blankPoint.y)
+        await page.mouse.dblclick(textPoint.x, textPoint.y)
+        assert.equal(await page.evaluate(() => getSelection().toString()), 'Native', 'Native double-click must select a word')
+        await page.mouse.click(textPoint.x, textPoint.y, { clickCount: 3 })
+        assert.ok((await page.evaluate(() => getSelection().toString())).includes('Native editor selection surface'), 'Native triple-click must select the paragraph')
+        await page.mouse.click(blankPoint.x, blankPoint.y)
+        await page.mouse.move(blankPoint.x, blankPoint.y)
+        await page.mouse.down()
+        await page.mouse.move(textPoint.x, textPoint.y, { steps: 12 })
+        await page.mouse.up()
+        const draggedSelection = await page.evaluate(() => { const s = getSelection(); return { text: s.toString(), anchor: s.anchorOffset, focus: s.focusOffset, anchorText: s.anchorNode?.textContent, focusText: s.focusNode?.textContent } })
+        assert.ok(draggedSelection.text.includes('editor selection surface'), `Dragging from blank space into text must extend native selection: ${JSON.stringify({ draggedSelection, textPoint, blankPoint })}`)
+        const chatPosition = await page.locator('[data-dsh-composer-split-chat]').evaluate(el => { el.scrollTop = 200; return el.scrollTop })
+        await editor.fill('Long native editor draft line.\n'.repeat(100))
+        const inputScroll = page.locator('[data-dsh-composer-split-pane] [data-input-scroll]')
+        assert.ok(await inputScroll.evaluate(el => el.scrollHeight > el.clientHeight + 500), 'Long draft must overflow the input scrollport')
+        await inputScroll.evaluate(el => { el.scrollTop = 0 })
+        assert.equal(await inputScroll.evaluate(el => el.scrollTop), 0, 'Wheel test must start at the top rather than at the fill caret')
+        const inputBox = await inputScroll.boundingBox()
+        await page.mouse.move(inputBox.x + inputBox.width / 2, inputBox.y + inputBox.height / 2)
+        await page.mouse.wheel(0, 500)
+        await page.waitForFunction(() => document.querySelector('[data-dsh-composer-split-pane] [data-input-scroll]').scrollTop > 0)
+        assert.equal(await page.locator('[data-dsh-composer-split-chat]').evaluate(el => el.scrollTop), chatPosition, 'Draft scrolling must not move Chat')
+        assert.ok(await page.locator('[data-dsh-composer-split-pane]').evaluate(el => el.scrollHeight <= el.clientHeight + 2), 'Long draft must not create an outer Composer scrollport')
+        await editor.fill('Native editor selection surface')
+        await page.setViewportSize({ width: 1920, height: 600 })
+        await page.waitForFunction(() => {
+          const el = document.querySelector('[data-composer-input]')
+          return el.getBoundingClientRect().height >= el.closest('[data-input-scroll]').getBoundingClientRect().height - 2
+        })
+        await page.setViewportSize({ width: 1920, height: 900 })
+        await editor.fill('')
         const nativeHandles = page.locator('[data-width-handle]')
         assert.equal(await nativeHandles.count(), 2)
         assert.deepEqual(await nativeHandles.evaluateAll(elements => elements.map(el => getComputedStyle(el).display)), ['none', 'none'], 'Native transcript handles must be hidden in split layout')
@@ -199,6 +292,7 @@ try {
         await separator.click()
         await page.getByRole('button', { name: '停靠到底部', exact: true }).click()
         await page.locator('[data-dsh-composer-split-active]').waitFor({ state: 'detached' })
+        assert.ok((await editor.boundingBox()).height < 96, 'Empty bottom Composer must retain its compact native editor')
         assert.ok((await nativeHandles.evaluateAll(elements => elements.map(el => getComputedStyle(el).display))).every(display => display !== 'none'), 'Bottom layout must restore native transcript handles')
         const transcriptHandle = page.locator('[data-width-handle="right"]')
         const transcriptBox = await transcriptHandle.boundingBox()
