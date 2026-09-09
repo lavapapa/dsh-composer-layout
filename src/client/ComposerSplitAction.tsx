@@ -148,6 +148,7 @@ export function ComposerSplitAction({ settings, sessionId, dismissInputTrigger }
   const legacyRef = useRef<LegacyLayout | null>(null)
   const widthDragRef = useRef<{ x: number; width: number; moved: boolean } | null>(null)
   const appliedPresetRef = useRef<ComposerLayoutSettings['defaultWidthPreset'] | null>(null)
+  const [active, setActive] = useState(false)
   const [split, setSplit] = useState(false)
   const [composerWidth, setComposerWidth] = useState(DEFAULT_WIDTH)
   const [bodyRect, setBodyRect] = useState<BodyRect | null>(null)
@@ -176,7 +177,7 @@ export function ComposerSplitAction({ settings, sessionId, dismissInputTrigger }
     const placement = preferences.rememberPlacement && remembered.placement !== undefined
       ? remembered.placement
       : preferences.defaultPlacement
-    setSplit(placement === 'right')
+    setSplit(active && placement === 'right')
 
     if (appliedPresetRef.current === preferences.defaultWidthPreset) return
     appliedPresetRef.current = preferences.defaultWidthPreset
@@ -189,7 +190,7 @@ export function ComposerSplitAction({ settings, sessionId, dismissInputTrigger }
     } else {
       setComposerWidth(widthForPreset(preferences.defaultWidthPreset, bodyRect.width))
     }
-  }, [bodyRect, preferences])
+  }, [active, bodyRect, preferences])
 
   useEffect(() => {
     const root = ownerRef.current?.root
@@ -204,6 +205,10 @@ export function ComposerSplitAction({ settings, sessionId, dismissInputTrigger }
     const owner = findOwner(control)
     if (owner === null) return
     ownerRef.current = owner
+    const updatePhase = (): void => { setActive(owner.root.dataset.phase === 'active') }
+    updatePhase()
+    const phaseObserver = new MutationObserver(updatePhase)
+    phaseObserver.observe(owner.root, { attributes: true, attributeFilter: ['data-phase'] })
     setBodyRect(rectOf(owner.body))
 
     const observer = new ResizeObserver(() => {
@@ -215,6 +220,7 @@ export function ComposerSplitAction({ settings, sessionId, dismissInputTrigger }
     observer.observe(owner.body)
     return () => {
       observer.disconnect()
+      phaseObserver.disconnect()
       ownerRef.current = null
       setBodyRect(null)
     }
@@ -289,7 +295,7 @@ export function ComposerSplitAction({ settings, sessionId, dismissInputTrigger }
 
   useLayoutEffect(() => {
     const control = controlRef.current
-    if (!split || !canUseSideLayout(bodyRect?.width ?? 0) || control === null) return
+    if (!active || !split || !canUseSideLayout(bodyRect?.width ?? 0) || control === null) return
     const layout = findLegacyLayout(control)
     if (layout === null) return
     legacyRef.current = layout
@@ -298,7 +304,7 @@ export function ComposerSplitAction({ settings, sessionId, dismissInputTrigger }
       legacyRef.current = null
       dispose()
     }
-  }, [bodyRect?.width, split])
+  }, [active, bodyRect?.width, split])
 
   useEffect(() => {
     const owner = ownerRef.current

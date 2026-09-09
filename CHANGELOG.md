@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.17-legacy.1
+
+- Preserve the textarea-based layout for the previous DSH RC generation.
+- Remove the side layout and its popup listeners when returning from an existing conversation to a new-session page; restore the remembered placement when the conversation becomes active again.
+- This maintenance line has no extra-control folding feature and therefore does not contain its width feedback loop.
+- The phase-transition regression failed before the fix and passed after it. Type checking and all unit tests passed; the packed artifact passed installation, plugin loading, and Hero geometry checks on DSH 0.1.1-rc.2 in Chromium and WebKit. Active-session browser interaction coverage remains limited to component regression tests.
+
+
 ## 0.1.9 — 2026-08-27
 
 - Make the right-side Composer's native textarea fill the visible short-draft surface, preserving native multi-click and drag selection in unused space.

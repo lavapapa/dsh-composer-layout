@@ -89,6 +89,22 @@ function heroFixture() {
 }
 
 describe('ComposerSplitAction', () => {
+  it('removes the side layout when an existing conversation returns to a new-session page', async () => {
+    measuredWidth = 1_000
+    const dismiss = vi.fn()
+    const view = fixture({ dismissInputTrigger: dismiss })
+    await screen.findByRole('separator', { name: /调整输入区域宽度/ })
+    view.container.querySelector<HTMLElement>('[data-phase]')!.dataset.phase = 'hero'
+    await waitFor(() => {
+      expect(view.container.querySelector('[data-dsh-composer-split-active]')).toBeNull()
+      expect(view.container.querySelector('[data-dsh-composer-split-pane]')).toBeNull()
+    })
+    fireEvent.pointerDown(screen.getByRole('button', { name: '模型' }))
+    expect(dismiss).not.toHaveBeenCalled()
+    view.container.querySelector<HTMLElement>('[data-phase]')!.dataset.phase = 'active'
+    await screen.findByRole('separator', { name: /调整输入区域宽度/ })
+  })
+
   it('does not apply side-layout input sizing on the Hero page', async () => {
     measuredWidth = 1_000
     const view = heroFixture()
