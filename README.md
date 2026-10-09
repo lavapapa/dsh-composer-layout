@@ -51,7 +51,7 @@ The plugin is presentation-only: it does not add model-facing tools, change prom
 
 ### Install from npm
 
-The npm package contains the prebuilt plugin bundle. Stable, alpha, and legacy DSH releases are tested with their corresponding plugin versions in Chromium and WebKit. Consult the [version-paired checks](docs/RELEASE_CHECKS.md#version-paired-browser-checks) before choosing a package; a successful alpha test does not promise compatibility with future alpha releases. Users of older DSH versions can pin `dsh-composer-layout@0.1.12`. Check the current npm release with `npm view dsh-composer-layout version`.
+The npm package contains the prebuilt plugin bundle. Consult the [version-paired checks](docs/RELEASE_CHECKS.md#version-paired-browser-checks) for the tested DSH releases. Check the npm version with `npm view dsh-composer-layout version` before installing.
 
 ```sh
 dsh plugin --profile web add dsh-composer-layout@latest
@@ -60,10 +60,10 @@ dsh web --profile web
 
 ### Install directly from GitHub
 
-DSH installs the plugin bundle directly from a GitHub repository; the new release tag is `v0.1.16` for DSH 0.1.2-rc.1. Users of older DSH versions can keep the `v0.1.12` tag.
+DSH can install the plugin bundle from a versioned GitHub release:
 
 ```sh
-dsh plugin --profile web add "github:lavapapa/dsh-composer-layout#v0.1.16"
+dsh plugin --profile web add "github:lavapapa/dsh-composer-layout#v0.1.20"
 dsh web --profile web
 ```
 

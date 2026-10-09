@@ -9,7 +9,7 @@ import { chromium, webkit } from 'playwright'
 import { zstdCompressSync } from 'node:zlib'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
-const dshVersion = process.env.DSH_VERSION ?? '0.1.2-rc.1'
+const dshVersion = process.env.DSH_VERSION ?? '0.2.0-rc.2'
 const dshPackage = `@deepseek-ai/dsh@${dshVersion}`
 const browserName = process.env.DSH_BROWSER ?? 'chromium'
 assert.ok(['chromium', 'webkit'].includes(browserName), 'DSH_BROWSER must be chromium or webkit')
@@ -69,6 +69,7 @@ try {
   const testSessionId = 'composer-layout-compat-session'
   const testWorkspace = join(home, 'workspace')
   await mkdir(testWorkspace)
+  await writeFile(join(testWorkspace, 'README.md'), '# Composer Layout test\n')
   const projectKey = `--${testWorkspace.replace(/^\/+|\/+$/g, '').replaceAll('/', '-')}--`
   const sessionDirectory = join(home, 'sessions', projectKey, testSessionId)
   await mkdir(sessionDirectory, { recursive: true })
@@ -106,6 +107,8 @@ try {
       page.on('pageerror', error => pageErrors.push(error.message))
       page.on('console', message => { if (message.type() === 'error') pageErrors.push(message.text()) })
       await page.addInitScript((placement) => {
+        if (sessionStorage.getItem('composer-compat-seeded')) return
+        sessionStorage.setItem('composer-compat-seeded', '1')
         localStorage.setItem('dsh.composer-split.settings', JSON.stringify({
           defaultPlacement: placement,
           rememberPlacement: true,
@@ -113,12 +116,12 @@ try {
           defaultWidthPreset: 'medium',
         }))
       }, defaultPlacement)
-      // 仅在隔离浏览器暴露已加载插件的真实 Context，用公开 sessions.open
-      // 精确打开测试会话；不替换 RPC、会话投影或业务组件。
+      // Observe the real Config form revision, so the reload cannot race an
+      // unfinished Host write or mistake the local preference for persistence.
       await page.route('**/plugins/**', async route => {
         if (!route.request().url().includes('dsh-composer-layout/client.js')) return route.continue()
         const response = await route.fetch()
-        const body = (await response.text()).replace('function apply(ctx) {\n  const settingsService', 'function apply(ctx) {\n  document.documentElement.__composerTestContext = ctx;\n  const settingsService')
+        const body = (await response.text()).replace('function apply(ctx) {\n  const settings =', 'function apply(ctx) {\n  document.documentElement.__composerTestContext = ctx;\n  const settings =')
         await route.fulfill({ response, body })
       })
       await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 20_000 })
@@ -157,23 +160,37 @@ try {
       }
       if (defaultPlacement === 'bottom') {
         await page.getByRole('button', { name: 'Settings', exact: true }).click()
-        await page.getByRole('button', { name: 'Plugins', exact: true }).click()
+        await page.getByRole('button', { name: 'Built-in plugins', exact: true }).click()
         await page.getByText('Composer Layout', { exact: true }).click()
         const settingsPanel = page.locator('section[aria-label="Composer Layout"]')
         await settingsPanel.waitFor({ state: 'visible' })
+        const initialRevision = await page.evaluate(() => document.documentElement.__composerTestContext.configForms.get('ui-composer-layout').getSnapshot().revision)
         await settingsPanel.getByRole('combobox').first().selectOption('auto')
         await settingsPanel.getByRole('slider').fill('0.75')
         assert.equal(await settingsPanel.getByRole('slider').inputValue(), '0.75')
-        console.log('verified Composer Layout settings registration and automatic threshold interaction')
+        await page.waitForFunction(revision => {
+          const snapshot = document.documentElement.__composerTestContext.configForms.get('ui-composer-layout').getSnapshot()
+          return snapshot.revision !== revision && snapshot.value?.autoThreshold === 0.75
+        }, initialRevision)
         await page.getByRole('button', { name: 'Close', exact: true }).click()
+        await page.evaluate(() => { localStorage.removeItem('dsh.composer-split.settings') })
+        await page.reload({ waitUntil: 'domcontentloaded' })
+        await testingNotice.waitFor({ state: 'visible', timeout: 3_000 })
+          .then(() => testingNotice.click())
+          .catch(() => {})
+        await configureLater.waitFor({ state: 'visible', timeout: 3_000 })
+          .then(() => configureLater.click())
+          .catch(() => {})
+        await page.locator('style[data-plugin="dsh-composer-layout"]').first().waitFor({ state: 'attached', timeout: 20_000 })
         await page.getByRole('button', { name: 'Settings', exact: true }).click()
-        await page.getByRole('button', { name: 'Plugins', exact: true }).click()
+        await page.getByRole('button', { name: 'Built-in plugins', exact: true }).click()
         await page.getByText('Composer Layout', { exact: true }).click()
         assert.equal(await settingsPanel.getByRole('combobox').first().inputValue(), 'auto')
         assert.equal(await settingsPanel.getByRole('slider').inputValue(), '0.75')
+        console.log('verified Host-persisted settings after clearing local overrides and reloading')
         await page.getByRole('button', { name: 'Close', exact: true }).click()
         await page.setViewportSize({ width: 1920, height: 900 })
-        await page.evaluate(async id => { await document.documentElement.__composerTestContext.sessions.open(id) }, testSessionId)
+        await page.getByText('Untitled', { exact: true }).click()
         await page.locator('[data-dsh-composer-split-adapter="plugin"]').waitFor({ state: 'attached', timeout: 20_000 })
         await page.getByText('Paragraph 100: a long answer for independent scrolling verification.', { exact: true }).waitFor({ state: 'attached', timeout: 20_000 })
         await page.locator('[data-dsh-composer-split-active="true"]').waitFor({ state: 'attached', timeout: 20_000 })
@@ -284,7 +301,62 @@ try {
         assert.equal(await page.locator('[data-dsh-composer-split-chat]').evaluate(el => el.scrollTop), chatPosition, 'Draft scrolling must not move Chat')
         assert.ok(await page.locator('[data-dsh-composer-split-pane]').evaluate(el => el.scrollHeight <= el.clientHeight + 2), 'Long draft must not create an outer Composer scrollport')
         await editor.fill('Native editor selection surface')
+        const splitPane = page.locator('[data-dsh-composer-split-pane]')
+        const inputCard = splitPane.locator('[data-composer-card]')
+        const cardHeightBeforePopups = (await inputCard.boundingBox()).height
+        const assertPopupInsidePane = async (label, popup) => {
+          const pane = await splitPane.boundingBox()
+          const box = await popup.boundingBox()
+          assert.ok(pane && box, `${label} popup must be measurable`)
+          assert.ok(box.x >= pane.x - 1 && box.x + box.width <= pane.x + pane.width + 1, `${label} popup must stay inside the Composer pane: ${JSON.stringify({ pane, box })}`)
+          assert.ok(box.y >= 0 && box.y + box.height <= (await page.evaluate(() => window.innerHeight)) + 1, `${label} popup must stay inside the viewport: ${JSON.stringify(box)}`)
+        }
+        const triggerMenu = page.locator('[role=listbox][aria-label="Trigger suggestions"]:visible')
+        await editor.fill('/')
+        await triggerMenu.waitFor({ state: 'visible', timeout: 5_000 })
+        await assertPopupInsidePane('Slash', triggerMenu)
+        if (artifactDirectory !== undefined) {
+          await mkdir(artifactDirectory, { recursive: true })
+          await page.screenshot({ path: join(artifactDirectory, `popup-slash-${browserName}.png`) })
+        }
+        await page.getByRole('button', { name: /Select model, current/ }).click()
+        await page.getByRole('menu', { name: 'Model and reasoning effort' }).waitFor({ state: 'visible', timeout: 5_000 })
+        assert.equal(await triggerMenu.count(), 0, 'Slash candidates must close before the model popup opens')
+        await assertPopupInsidePane('Model', page.getByRole('menu', { name: 'Model and reasoning effort' }))
+        await page.keyboard.press('Escape')
+        await editor.fill('@')
+        await triggerMenu.waitFor({ state: 'visible', timeout: 5_000 })
+        await assertPopupInsidePane('Reference', triggerMenu)
+        await page.getByRole('button', { name: /Access mode, current/ }).click()
+        const accessMenu = page.getByRole('menu').filter({ has: page.getByRole('menuitem', { name: /Workspace Write/ }) })
+        await accessMenu.waitFor({ state: 'visible', timeout: 5_000 })
+        assert.equal(await triggerMenu.count(), 0, 'Reference candidates must close before the access popup opens')
+        await assertPopupInsidePane('Access', accessMenu)
+        await page.keyboard.press('Escape')
+        const groupedMenuTrigger = splitPane.locator('button[aria-haspopup="listbox"]').first()
+        await groupedMenuTrigger.click()
+        await triggerMenu.waitFor({ state: 'visible', timeout: 5_000 })
+        await assertPopupInsidePane('Plus/command', triggerMenu)
+        await page.keyboard.press('Escape')
+        await editor.fill('')
+        await editor.fill(`${'context line\n'.repeat(24)}@`)
+        await triggerMenu.waitFor({ state: 'visible', timeout: 5_000 })
+        await triggerMenu.getByRole('option', { name: 'README.md', exact: true }).waitFor({ state: 'visible', timeout: 5_000 })
+        await assertPopupInsidePane('Long-draft reference', triggerMenu)
+        await triggerMenu.getByRole('option', { name: 'README.md', exact: true }).click()
+        assert.equal(await triggerMenu.count(), 0, 'Reference selection must close its candidate menu')
+        assert.match(await editor.innerText(), /README\.md/, 'Reference selection must insert the chosen file token')
+        await page.keyboard.press('Escape')
+        await editor.fill('')
+        const cardHeightAfterPopups = (await inputCard.boundingBox()).height
+        assert.ok(Math.abs(cardHeightAfterPopups - cardHeightBeforePopups) <= 2, `Native Composer popups must not change the side card height: ${cardHeightBeforePopups} -> ${cardHeightAfterPopups}`)
+        console.log('verified slash/reference popup placement and native popup dismissal in side layout')
         await page.setViewportSize({ width: 1920, height: 600 })
+        await editor.fill('/')
+        await triggerMenu.waitFor({ state: 'visible', timeout: 5_000 })
+        await assertPopupInsidePane('Short-window slash', triggerMenu)
+        await page.keyboard.press('Escape')
+        await editor.fill('Native editor selection surface')
         await page.waitForFunction(() => {
           const el = document.querySelector('[data-composer-input]')
           return el.getBoundingClientRect().height >= el.closest('[data-input-scroll]').getBoundingClientRect().height - 2
@@ -335,6 +407,32 @@ try {
         await scroll.evaluate(el => { el.scrollTop = 200; el.dispatchEvent(new Event('scroll')) })
         await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))))
         assert.ok((await scroll.evaluate(el => el.scrollTop)) < 300, 'Reading near the answer start must not jump to the bottom')
+        // 使用真实宿主 CSS 和 display:contents 插槽，覆盖 Flex 优先级与折叠前后的测量。
+        await page.locator('[data-slot="conversation.input.right"]').evaluate(slot => {
+          for (const [label, width] of [['Extra mode control', 160], ['Extra quota control', 120]]) {
+            const button = document.createElement('button')
+            button.textContent = label
+            button.dataset.overflowRegression = ''
+            button.style.cssText = `flex:none;width:${width}px;height:28px`
+            slot.append(button)
+          }
+        })
+        const divider = page.getByRole('separator')
+        for (let step = 0; step < 55; step++) await divider.press('ArrowRight')
+        const overflow = page.getByRole('button', { name: '显示额外输入控件', exact: true })
+        await overflow.waitFor({ state: 'visible', timeout: 5_000 })
+        await overflow.click()
+        await page.getByRole('button', { name: 'Extra mode control', exact: true }).waitFor({ state: 'visible' })
+        await page.getByRole('button', { name: 'Extra quota control', exact: true }).waitFor({ state: 'visible' })
+        await overflow.click()
+        for (let step = 0; step < 35; step++) await divider.press('ArrowLeft')
+        await overflow.waitFor({ state: 'detached', timeout: 5_000 })
+        await page.getByRole('button', { name: 'Extra quota control', exact: true }).waitFor({ state: 'visible' })
+        for (let step = 0; step < 35; step++) await divider.press('ArrowRight')
+        await overflow.waitFor({ state: 'visible', timeout: 5_000 })
+        assert.equal(await page.locator('[data-dsh-composer-measuring]').count(), 0, 'Measurement styles must be removed before paint')
+        await page.locator('[data-overflow-regression]').evaluateAll(elements => elements.forEach(el => el.remove()))
+        console.log('verified extra controls: narrow collapse, popup visibility, wide restoration and repeat collapse with native CSS')
         assert.equal(pageErrors.length, 0, pageErrors.join('\n'))
         if (artifactDirectory !== undefined) await page.screenshot({ path: join(artifactDirectory, 'active-split.png') })
         console.log('verified real session: two-column geometry, dragging, bottom/auto switching, narrow-width disabling, and settled answer scrolling')

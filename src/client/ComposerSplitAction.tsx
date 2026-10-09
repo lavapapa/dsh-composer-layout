@@ -5,7 +5,8 @@ import {
 import { createPortal } from 'react-dom'
 import type { PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import type {} from '@deepseek-ai/dsh-client-ui-conversation/client'
-import type { SettingsScope } from '@deepseek-ai/dsh-client-runtime/client'
+import type {} from '@deepseek-ai/dsh-client-ui-session/client'
+import type { ConfigForm } from '@deepseek-ai/dsh-client-ui-settings/client'
 import type { ComposerLayoutPlacement, ComposerLayoutSettings } from '../settings.ts'
 import { COMPOSER_LAYOUT_DEFAULTS } from '../settings.ts'
 import {
@@ -23,7 +24,7 @@ const HANDLE_HIT_WIDTH = 10
 
 export interface ComposerSplitInjected {
   /** Durable user preferences shared with the Settings tab. */
-  settings?: SettingsScope<ComposerLayoutSettings>
+  settings?: ConfigForm<ComposerLayoutSettings>
   /** Close the current session's slash/reference candidate list. */
   dismissInputTrigger?: () => void
 }
@@ -156,7 +157,7 @@ function findRightSlotOverflow(composer: HTMLElement): RightSlotOverflow | null 
   const trailing = row?.lastElementChild
   if (!(row instanceof HTMLElement) || !(trailing instanceof HTMLElement)) return null
 
-  const slot = trailing.querySelector<HTMLElement>(':scope > [data-slot="conversation.input.right"]')
+  const slot = trailing.querySelector<HTMLElement>('[data-slot="conversation.input.right"]')
   if (slot === null) return null
   const items = Array.from(slot.children).filter((child): child is HTMLElement => child instanceof HTMLElement)
   return items.length === 0 ? null : { row, trailing, slot, items }
@@ -172,17 +173,17 @@ function visualWidth(element: HTMLElement): number {
 
 function shouldCollapseRightSlot(overflow: RightSlotOverflow): boolean {
   const { row, trailing } = overflow
-  const leading = Array.from(row.children).filter((child): child is HTMLElement => child instanceof HTMLElement && child !== trailing)
-  const gap = Number.parseFloat(getComputedStyle(row).columnGap) || 0
-  const capacity = row.getBoundingClientRect().width
-    - leading.reduce((total, child) => total + child.getBoundingClientRect().width, 0)
-    - gap * leading.length
-  if (capacity <= 0) return false
-  // Measure the same uncollapsed, intrinsic layout every time. The overflow
-  // trigger and flex shrinking must not participate in the decision they cause.
+  // Measure both groups in their expanded layout, before folding can change
+  // flex allocation. client/offset widths keep padding and gaps in CSS pixels.
   trailing.dataset.dshComposerMeasuring = ''
   try {
-    return trailing.getBoundingClientRect().width > capacity
+    const style = getComputedStyle(row)
+    const leading = Array.from(row.children).filter((child): child is HTMLElement => child instanceof HTMLElement && child !== trailing)
+    const capacity = row.clientWidth
+      - (Number.parseFloat(style.paddingLeft) || 0) - (Number.parseFloat(style.paddingRight) || 0)
+      - leading.reduce((total, child) => total + child.offsetWidth, 0)
+      - (Number.parseFloat(style.columnGap) || 0) * leading.length
+    return capacity > 0 && trailing.offsetWidth > capacity
   } finally {
     delete trailing.dataset.dshComposerMeasuring
   }
@@ -198,11 +199,12 @@ function clearSlotOverflow(slot: HTMLElement | null): void {
 
 /** Placement menu plus the plugin-owned, reversible split adapter. */
 const fallbackSnapshot = { status: 'unavailable' as const, value: undefined, base: undefined, user: undefined, revision: undefined, writable: false, mode: 'memory' as const }
-const fallbackSettings: SettingsScope<ComposerLayoutSettings> = {
+const fallbackSettings: ConfigForm<ComposerLayoutSettings> = {
   getSnapshot: () => fallbackSnapshot,
   subscribe: () => () => {},
-  set: async () => {},
-  unset: async () => {},
+  set: async () => false,
+  unset: async () => false,
+  mutate: async () => false,
 }
 
 export function ComposerSplitAction({ settings, sessionId, dismissInputTrigger }: ComposerSplitActionProps) {
@@ -364,9 +366,19 @@ export function ComposerSplitAction({ settings, sessionId, dismissInputTrigger }
       return
     }
 
+    let observed: HTMLElement[] = []
+    const resizeObserver = new ResizeObserver(() => { refresh() })
     const refresh = (): void => {
       if (ownerRef.current?.root.dataset.phase !== 'active') return
       const next = findRightSlotOverflow(composer)
+      // Plugin controls can mount after this effect. Observe their actual boxes;
+      // a display:contents slot has no box and cannot report width changes.
+      const targets = next === null ? [] : [next.row, ...next.items]
+      if (targets.length !== observed.length || targets.some((target, index) => target !== observed[index])) {
+        resizeObserver.disconnect()
+        targets.forEach(target => { resizeObserver.observe(target) })
+        observed = targets
+      }
       const previous = rightSlotOverflowSlotRef.current
       if (previous !== null && previous !== next?.slot) clearSlotOverflow(previous)
       const collapsed = next !== null && shouldCollapseRightSlot(next)
@@ -385,13 +397,7 @@ export function ComposerSplitAction({ settings, sessionId, dismissInputTrigger }
 
     refresh()
     const mutationObserver = new MutationObserver(refresh)
-    const resizeObserver = new ResizeObserver(refresh)
     mutationObserver.observe(composer, { childList: true, subtree: true })
-    const current = findRightSlotOverflow(composer)
-    if (current !== null) {
-      resizeObserver.observe(current.row)
-      resizeObserver.observe(current.slot)
-    }
     return () => {
       mutationObserver.disconnect()
       resizeObserver.disconnect()

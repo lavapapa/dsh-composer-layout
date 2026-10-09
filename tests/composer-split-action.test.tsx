@@ -48,6 +48,12 @@ beforeEach(() => {
       width, height: measuredHeight, toJSON: () => ({}),
     }
   })
+  vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockImplementation(function () {
+    return this.getBoundingClientRect().width
+  })
+  vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockImplementation(function () {
+    return this.getBoundingClientRect().width
+  })
   localStorage.clear()
   resizeCallbacks.clear()
   trailingWidth = 100
@@ -117,10 +123,13 @@ function activeFixture(props: FixtureProps = {}) {
                 <button type="button" aria-label="命令" aria-haspopup="listbox">命令</button>
               </div>
               <div data-testid="input-trailing">
-                <div data-slot="conversation.input.right">{rightSlotItems}</div>
-                <div data-slot="conversation.input.model">
-                  <button type="button" aria-label="模型" aria-haspopup="menu">模型</button>
+                <div data-testid="standard-controls">
+                  <div data-slot="conversation.input.right">{rightSlotItems}</div>
+                  <div data-slot="conversation.input.model">
+                    <button type="button" aria-label="模型" aria-haspopup="menu">模型</button>
+                  </div>
                 </div>
+                <div data-slot="conversation.input.activity" />
                 <button type="button" aria-label="发送">发送</button>
               </div>
             </div>

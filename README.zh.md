@@ -51,7 +51,7 @@
 
 ### 从 npm 安装
 
-npm 包包含预构建好的插件 bundle。稳定版、alpha 和旧版 DSH 分别与对应的插件版本配对，在 Chromium 和 WebKit 中测试。安装前请查阅[版本配对与测试范围](docs/RELEASE_CHECKS.md#version-paired-browser-checks)；已通过的 alpha 测试不代表未来 alpha 也兼容。旧版 DSH 用户仍可指定 `dsh-composer-layout@0.1.12`；当前 npm 版本可用 `npm view dsh-composer-layout version` 查询。
+npm 包包含预构建好的插件。安装前请查阅[版本配对与测试范围](docs/RELEASE_CHECKS.md#version-paired-browser-checks)，确认对应 DSH 版本已通过验证；用 `npm view dsh-composer-layout version` 查询 npm 版本。
 
 ```sh
 dsh plugin --profile web add dsh-composer-layout@latest
@@ -60,10 +60,10 @@ dsh web --profile web
 
 ### 直接从 GitHub 安装
 
-DSH 可以直接从 GitHub 仓库安装插件 bundle；新版本标签为 `v0.1.16`，针对 DSH 0.1.2-rc.1。旧版 DSH 用户仍可使用 `v0.1.12` 标签。
+DSH 可以通过 GitHub 发布标签安装插件：
 
 ```sh
-dsh plugin --profile web add "github:lavapapa/dsh-composer-layout#v0.1.16"
+dsh plugin --profile web add "github:lavapapa/dsh-composer-layout#v0.1.20"
 dsh web --profile web
 ```
 

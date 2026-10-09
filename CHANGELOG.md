@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.1.20 — DSH 0.2 support
+
+- Expose live Composer preferences through the host plugin's `Config` schema and the client `configForms` service; keep automatic placement and its threshold editable in the new settings panel.
+- Drop the removed invariant companion and client runtime dependency; adapt right-side control overflow to the new activity/standard-controls toolbar structure.
+- Verify the packed release on DSH `0.2.0-rc.2` and `0.2.1-alpha.1` in isolated Chromium and WebKit profiles, including persisted settings, independent scrolling, native editor selection, popup placement, and extra-control overflow.
+
+## 0.1.19
+
+- Register the Composer settings namespace with the stable `ctx.settings` contract, removing the obsolete `settingsNamespace` runtime import so the plugin loads on DSH 0.1.5-rc.2 profiles that still contain the older settings package.
+
+## 0.1.18
+
+- Fix right-side extra-control folding: the intrinsic measurement now overrides the side layout’s flex rule, excludes toolbar padding, and restores the slot’s original display behavior.
+- Subscribe to real control boxes when plugins mount after the Composer, so widening restores controls and later narrowing folds them again.
+- Add a real-host browser regression for late-mounted controls, collapsed popup visibility, and repeated narrow/wide transitions. The previous RC maintenance line has no folding implementation and needs no corresponding change.
+- Keep slash and reference menus anchored above the side Composer controls so their scrollport does not cover the native model or access triggers.
+- Extend the browser compatibility pass to verify slash/reference placement and dismissal before native model/access popups.
+- Cover the long-draft `@` picker end to end: candidates remain visible in the side pane and selecting a file inserts its reference token.
+
 ## 0.1.17
 
 - Publish the same verified artifact through `latest` for DSH 0.1.2-rc.1 and `alpha` for DSH 0.1.5-alpha.1. Both host versions passed Chromium and WebKit compatibility checks; the reported Dia freeze was confirmed resolved by the user on the current RC.

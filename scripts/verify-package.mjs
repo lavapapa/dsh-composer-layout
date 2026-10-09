@@ -6,8 +6,8 @@ const patch = await readFile(new URL('../cordis.patch.yml', import.meta.url), 'u
 
 const required = [
   'lib/index.js',
+  'lib/index.d.ts',
   'lib/client.js',
-  'lib/invariant.js',
   'cordis.patch.yml',
   'assets/icon.svg',
   'assets/screenshots/hero-en.png',

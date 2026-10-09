@@ -320,6 +320,15 @@
   max-height: min(320px, calc(100cqh - 128px)) !important;
 }
 
+/* The host's overlay anchor is top-aligned for its sticky bottom Composer.
+   In a full-height side pane that would place trigger menus over the page
+   header and leave only a few pixels for their scrollport. Keep the anchor
+   just above the fixed control row so candidates do not intercept model,
+   access, or other native popup triggers. */
+:global([data-dsh-composer-split-pane] [data-composer-card] > div:has([role='listbox'])) {
+  inset: auto 0 52px !important;
+}
+
 /* DSH exposes third-party input controls through `conversation.input.right`.
    The slot itself becomes the overflow surface, keeping every plugin control
    mounted and interactive instead of recreating a partial copy. */
@@ -382,7 +391,7 @@
 }
 
 /* A synchronous measurement restores these rules before the next paint. */
-:global([data-dsh-composer-measuring]) {
+:global([data-dsh-composer-split-pane] [data-input-scroll] + * > [data-dsh-composer-measuring]:last-child) {
   flex: none !important;
   width: max-content !important;
   min-width: 0 !important;
@@ -393,7 +402,12 @@
   display: none !important;
 }
 
-:global([data-composer-seat] [data-dsh-composer-measuring] > [data-slot='conversation.input.right']) {
+:global([data-dsh-composer-split-pane] [data-input-scroll] + *:has(> [data-dsh-composer-measuring]) > :first-child) {
+  flex: none !important;
+}
+
+:global([data-composer-seat] [data-dsh-composer-measuring] [data-slot='conversation.input.right']) {
+  display: contents !important;
   position: static !important;
   flex: none !important;
   width: max-content !important;

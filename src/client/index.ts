@@ -1,6 +1,10 @@
 /** Standalone Chat/Composer split-layout browser plugin. */
-import type { ClientContext } from '@deepseek-ai/dsh-client-runtime/client'
-import type { SettingsScope } from '@deepseek-ai/dsh-client-runtime/client'
+import type { Context } from '@deepseek-ai/cordis'
+import type {} from '@deepseek-ai/dsh-api-session-controller/client'
+import type { ConfigForm } from '@deepseek-ai/dsh-client-ui-settings/client'
+import type {} from '@deepseek-ai/dsh-client-locale/client'
+import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
+import type {} from '@deepseek-ai/dsh-client-ui-session/client'
 import type {} from '@deepseek-ai/dsh-client-ui-input-trigger/client'
 import {
   ComposerSplitAction,
@@ -21,34 +25,21 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
 }
 
 /** Required client services. Layout ownership stays inside this standalone plugin. */
-export const inject = ['slots', 'sessions', 'inputTriggers']
+export const inject = ['slots', 'sessions', 'inputTriggers', 'configForms', 'locale']
 
 /** Register the Composer-card hover controls. */
-const fallbackSettings: SettingsScope<ComposerLayoutSettings> = {
-  getSnapshot: () => ({ status: 'unavailable', value: undefined, base: undefined, user: undefined, revision: undefined, writable: false, mode: 'memory' }),
-  subscribe: () => () => {},
-  set: async () => {},
-  unset: async () => {},
-}
-
-export function apply(ctx: ClientContext): void {
-  const settingsService = ctx.get('settingsScope') as { bind: <T>(spec: { namespace: string }) => SettingsScope<T> } | undefined
-  const settings = settingsService !== undefined && ctx.get('connection') !== undefined && ctx.get('remote') !== undefined
-    ? settingsService.bind<ComposerLayoutSettings>({ namespace: COMPOSER_LAYOUT_SETTINGS_NAMESPACE })
-    : fallbackSettings
-  const locale = ctx.get('locale') as { register: (namespace: string, dictionaries: unknown) => () => void; bind: (namespace: string) => (key: string) => string } | undefined
-  if (locale !== undefined) {
-    ctx.effect(() => locale.register('settings.composerLayout', composerLayoutLocale), 'composer-layout: settings locale')
-    ctx.slots.inject('settings.plugins.tab', () => ctx.slots.register({
-      name: 'settings.plugins.tab',
-      id: 'composer-layout',
-      order: 20,
-      label: () => locale.bind('settings.composerLayout')('tab'),
-      locale: 'settings.composerLayout',
-      inject: (): { settings: SettingsScope<ComposerLayoutSettings> } => ({ settings }),
-    }, ComposerLayoutSettingsTab))
-  }
-  ctx.inject(['slots', 'sessions', 'inputTriggers'], (scope: ClientContext) => {
+export function apply(ctx: Context): void {
+  const settings = ctx.configForms.get<ComposerLayoutSettings>(COMPOSER_LAYOUT_SETTINGS_NAMESPACE)
+  ctx.effect(() => ctx.locale.register('settings.composerLayout', composerLayoutLocale), 'composer-layout: settings locale')
+  ctx.effect(() => ctx.configForms.whileServed([COMPOSER_LAYOUT_SETTINGS_NAMESPACE], () => ctx.slots.inject('settings.plugins.tab', () => ctx.slots.register({
+    name: 'settings.plugins.tab',
+    id: 'composer-layout',
+    order: 20,
+    label: () => ctx.locale.bind('settings.composerLayout')('tab'),
+    locale: 'settings.composerLayout',
+    inject: (): { settings: ConfigForm<ComposerLayoutSettings> } => ({ settings }),
+  }, ComposerLayoutSettingsTab))))
+  ctx.inject(['slots', 'sessions', 'inputTriggers'], (scope: Context) => {
     const { sessions, inputTriggers } = scope
     scope.slots.inject(
       'conversation.input.overlay',

@@ -62,16 +62,7 @@ await Promise.all([
     format: 'esm',
     platform: 'node',
     target: 'node22',
-    external: ['@deepseek-ai/dsh-settings', '@deepseek-ai/schemastery', '@deepseek-ai/cordis'],
-  }),
-  build({
-    entryPoints: [resolve(root, 'src/invariant.ts')],
-    outfile: resolve(lib, 'invariant.js'),
-    bundle: true,
-    format: 'esm',
-    platform: 'node',
-    target: 'node22',
-    external: ['@deepseek-ai/cordis', '@deepseek-ai/dsh-invariants'],
+    external: ['@deepseek-ai/schemastery'],
   }),
   build({
     entryPoints: [resolve(root, 'src/client/index.ts')],

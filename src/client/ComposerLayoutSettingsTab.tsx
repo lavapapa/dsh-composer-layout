@@ -1,6 +1,6 @@
 import { useState, useSyncExternalStore } from 'react'
 import type { PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
-import type { SettingsScope } from '@deepseek-ai/dsh-client-runtime/client'
+import type { ConfigForm } from '@deepseek-ai/dsh-client-ui-settings/client'
 import type { ComposerLayoutSettings } from '../settings.ts'
 import { COMPOSER_LAYOUT_DEFAULTS } from '../settings.ts'
 import { readLocalSettings, writeLocalSetting } from './settings-storage.ts'
@@ -9,7 +9,7 @@ import guideEn from '../../assets/screenshots/layout-guide-en.webp'
 import guideZh from '../../assets/screenshots/layout-guide-zh.webp'
 
 export interface ComposerLayoutSettingsInjected {
-  settings: SettingsScope<ComposerLayoutSettings>
+  settings: ConfigForm<ComposerLayoutSettings>
 }
 
 type Props = PropsRuntime<'settings.plugins.tab'>
@@ -17,11 +17,12 @@ type Props = PropsRuntime<'settings.plugins.tab'>
   & ComposerLayoutSettingsInjected
 
 const unavailableSnapshot = { status: 'unavailable' as const, value: undefined, base: undefined, user: undefined, revision: undefined, writable: false, mode: 'memory' as const }
-const unavailableSettings: SettingsScope<ComposerLayoutSettings> = {
+const unavailableSettings: ConfigForm<ComposerLayoutSettings> = {
   getSnapshot: () => unavailableSnapshot,
   subscribe: () => () => {},
-  set: async () => {},
-  unset: async () => {},
+  set: async () => false,
+  unset: async () => false,
+  mutate: async () => false,
 }
 
 export function ComposerLayoutSettingsTab({ t, settings }: Props) {
