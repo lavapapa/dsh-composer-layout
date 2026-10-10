@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "DSH Composer 控件布局",
+    "description": "切换 Composer 的底部、右侧或自动布局，支持自适应调宽与空间折叠。"
+  }
+}

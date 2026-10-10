@@ -73,7 +73,7 @@ await Promise.all([
     target: 'es2024',
     sourcemap: false,
     loader: { '.webp': 'dataurl' },
-    external: ['react', 'react-dom', 'react/jsx-runtime'],
+    external: ['react', 'react-dom', 'react/jsx-runtime', '@deepseek-ai/dsh-client-ui-primitives'],
     plugins: [cssModules],
     banner: { js: `window.__ModuleLoader__.load({ id: ${JSON.stringify(clientId)}, factory: (require) => { var module = { exports: {} }; var exports = module.exports;` },
     footer: { js: 'return module.exports; }});' },

@@ -216,51 +216,44 @@
   min-height: 0;
 }
 
-:global([data-dsh-composer-split-active='true']) {
-  container-type: inline-size;
-  container-name: dsh-composer-split-root;
-}
-
-/* Transcript handles use the whole conversation width in DSH. In split mode,
-   the pane divider owns reading-space resizing; bottom mode stays native. */
+/* 保留官方滚动容器与底部 seat 的几何语义，仅把输入呈现层停靠在右侧。 */
 :global([data-dsh-composer-split-active='true'] [data-width-handle]) {
   display: none !important;
 }
 
-:global([data-dsh-composer-split-active='true'] [data-dsh-composer-split-body]) {
-  display: grid !important;
-  grid-template-columns: minmax(320px, 1fr) minmax(360px, var(--dsh-composer-split-width, 420px));
-  grid-template-rows: minmax(0, 1fr);
-  min-height: 0;
-  overflow: hidden !important;
-  scrollbar-gutter: auto !important;
-}
-
-:global([data-dsh-composer-split-body] [data-dsh-composer-split-chat]) {
+/* 保留原生 scrollport 完整裁剪区，让浏览器原生 wheel 可命中右侧输入滚动层。 */
+:global([data-dsh-composer-split-chat]) {
+  width: calc(100% - var(--dsh-composer-split-width, 420px));
   --dsh-chat-content-width: 100%;
-  flex: 1 1 0 !important;
-  min-width: 0;
-  min-height: 0 !important;
-  height: 100%;
-  overflow-x: hidden;
-  overflow-y: auto;
-  scrollbar-gutter: stable;
 }
 
-:global([data-dsh-composer-split-body] > [data-dsh-composer-split-pane]) {
-  position: relative !important;
-  bottom: auto !important;
+:global([data-dsh-composer-split-pane]) {
+  height: 0 !important;
+  min-height: 0 !important;
+  padding: 0 !important;
+}
+
+:global([data-dsh-composer-split-frame]) {
+  position: fixed !important;
+  top: var(--dsh-composer-pane-top);
+  left: var(--dsh-composer-pane-left);
+  width: var(--dsh-composer-split-width, 420px);
+  height: var(--dsh-composer-pane-height);
+  display: flex !important;
+  flex-direction: column;
   z-index: 7;
   box-sizing: border-box;
-  justify-content: flex-end;
   min-width: 0;
   min-height: 0;
-  height: 100%;
-  container-type: size;
-  overflow-x: hidden;
-  overflow-y: auto;
-  border-left: 0;
-  background: var(--dsw-alias-bg-base) !important;
+  background: var(--dsw-alias-bg-base);
+}
+
+:global([data-dsh-composer-split-pane]) .separator {
+  position: fixed;
+  top: var(--dsh-composer-pane-top);
+  left: calc(var(--dsh-composer-pane-left) - 5px);
+  height: var(--dsh-composer-pane-height);
+  bottom: auto;
 }
 
 :global([data-dsh-composer-split-pane]) {
@@ -270,11 +263,11 @@
   /* InputBar defines the normal 14-line cap on its Composer seat after this
      plugin sheet loads. This side-only value must win that cascade so the
      scrollport uses the whole area above the controls. */
-  --dsh-composer-text-max-height: max(96px, calc(100cqh - 104px)) !important;
+  --dsh-composer-text-max-height: max(96px, calc(var(--dsh-composer-pane-height) - 104px)) !important;
 }
 
 :global([data-dsh-composer-split-pane] [data-input-scroll]) {
-  min-height: clamp(96px, 18cqh, 168px);
+  min-height: clamp(96px, calc(var(--dsh-composer-pane-height) * 0.18), 168px);
 }
 
 /* DSH lets the control row wrap by default. That is useful for a compact
@@ -317,7 +310,7 @@
    controls row in current DSH, collapsing that row when a menu opens. Limit
    only the popup surface's height in the side pane. */
 :global([data-dsh-composer-split-pane] :is([role='listbox'], [role='menu'])) {
-  max-height: min(320px, calc(100cqh - 128px)) !important;
+  max-height: min(320px, calc(var(--dsh-composer-pane-height) - 128px)) !important;
 }
 
 /* The host's overlay anchor is top-aligned for its sticky bottom Composer.
@@ -365,7 +358,7 @@
   height: 14px;
 }
 
-:global([data-dsh-composer-split-pane] [data-dsh-composer-slot-overflow]) {
+:global([data-composer-seat] [data-dsh-composer-slot-overflow]) {
   position: absolute !important;
   display: flex !important;
   align-items: center;
@@ -374,24 +367,70 @@
   pointer-events: none;
 }
 
-:global([data-dsh-composer-split-pane] [data-dsh-composer-slot-overflow][data-dsh-composer-slot-overflow-open]) {
+:global([data-composer-seat] [data-dsh-composer-slot-overflow][data-dsh-composer-slot-overflow-open]) {
   position: fixed !important;
   z-index: 52;
+  isolation: isolate;
   left: var(--dsh-composer-slot-overflow-left);
   top: var(--dsh-composer-slot-overflow-top);
   box-sizing: border-box;
-  min-height: 38px;
+  min-width: 144px;
+  max-width: min(360px, calc(100vw - 24px));
+  max-height: min(320px, calc(100vh - 24px));
+  width: max-content;
+  flex-direction: row;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  overflow: visible;
   padding: 4px;
-  border: 1px solid var(--dsw-alias-border-inverted);
-  border-radius: 12px;
-  background: var(--dsw-specific-menu);
-  box-shadow: var(--dsw-shadow-lv3);
+  border: 0;
+  border-radius: var(--dsw-radius-lg);
+  background: transparent;
+  --dsw-elevation-stroke-color: var(--dsw-alias-border-l1);
+  box-shadow: var(--dsw-elevation-prominent);
+  --dsh-scrollbar-thumb: var(--dsw-alias-scrollbar-bg-l2);
+  --dsh-scrollbar-thumb-hover: var(--dsw-alias-scrollbar-hover-l2);
   visibility: visible;
   pointer-events: auto;
 }
 
-/* A synchronous measurement restores these rules before the next paint. */
-:global([data-dsh-composer-split-pane] [data-input-scroll] + * > [data-dsh-composer-measuring]:last-child) {
+.slotOverflowSurface {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+
+/* 分割线是 frame 的兄弟分支；提升真正的层叠根，原生 body 弹层仍在上方。 */
+:global([data-dsh-composer-split-frame]:has([data-dsh-composer-slot-overflow-open])) {
+  z-index: 21;
+}
+
+/* 原控件与 hover 提示保持自身布局；额度提示必须能浮到面板外。 */
+:global([data-dsh-composer-slot-overflow-open] > [data-openai-codex-quota]),
+:global([data-dsh-composer-slot-overflow-open] > span:has(> [data-openai-codex-fast-mode])) {
+  flex: 0 0 auto;
+}
+
+/* 仅在第三方控件溢出时收成单行；宽裕的底部工具栏维持官方样式。 */
+:global([data-composer-seat] [data-input-scroll] + *:has([data-dsh-composer-slot-overflow])) {
+  flex-wrap: nowrap !important;
+  min-width: 0;
+}
+
+:global([data-composer-seat] [data-input-scroll] + *:has([data-dsh-composer-slot-overflow]) > :last-child) {
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+  justify-content: flex-end;
+}
+
+/* 测量同步结束后恢复；放在折叠规则之后，保证测量时的内在宽度不会被同优先级 flex 收缩。 */
+:global([data-composer-seat] [data-input-scroll] + *:has(> [data-dsh-composer-measuring])) {
+  flex-wrap: nowrap !important;
+}
+
+:global([data-composer-seat] [data-input-scroll] + * > [data-dsh-composer-measuring]:last-child) {
   flex: none !important;
   width: max-content !important;
   min-width: 0 !important;
@@ -402,7 +441,7 @@
   display: none !important;
 }
 
-:global([data-dsh-composer-split-pane] [data-input-scroll] + *:has(> [data-dsh-composer-measuring]) > :first-child) {
+:global([data-composer-seat] [data-input-scroll] + *:has(> [data-dsh-composer-measuring]) > :first-child) {
   flex: none !important;
 }
 

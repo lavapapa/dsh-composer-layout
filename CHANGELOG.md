@@ -1,5 +1,31 @@
 # Changelog
 
+## 0.1.24
+
+- Preserve DSH's native transcript scroll owner and reading anchors in Right layout, including remembered layouts mounted after the session surface.
+- Fold overflowing third-party input controls in Bottom and Right layouts using native menu surfaces and anchored positioning.
+- Keep the original controls horizontally arranged at their own sizes, retain their state and callbacks, and allow inline quota tooltips outside the popup without clipping or scrollbars.
+- Publish the existing icon and English/Chinese display metadata through DSH's native Plugin Manager metadata contract.
+- Refresh both READMEs and layout illustrations with installation and update instructions for the current plugin system.
+- Verify the packed release on DSH `0.2.0-rc.2` and `0.2.1-alpha.2` in Chromium and WebKit, with 36 local tests passing.
+
+## 0.1.23 — Unpublished
+- Keep extra input controls horizontally arranged at their original sizes inside the native menu surface.
+- Let inline quota and speed tooltips float outside the popup without clipping, resizing it, or creating scrollbars.
+
+## 0.1.22 — Unpublished
+
+- Use DSH's native menu surface and vertical row geometry for extra input controls, preserving their original state and handlers.
+- Lift the side Composer's stacking root while the popup is open, so the divider cannot intercept its hover or clicks and native child overlays remain above it.
+- Use native anchored positioning for viewport, divider, and widget-size changes, with the same gap and viewport margins as DSH menus.
+
+## 0.1.21 — Unpublished
+
+- Preserve the native transcript scroll owner and bottom-seat geometry in Right layout, so DSH's own submission following and reading-position policy keep working.
+- Fold overflowing third-party input controls in Bottom as well as Right layout, retaining the original controls and bounding the popup to the viewport.
+- Initialize presentation geometry when a remembered side layout mounts after the session surface.
+- Add real-host click/Enter submission, streamed response following, and history-browsing regressions without model calls.
+
 ## 0.1.20 — DSH 0.2 support
 
 - Expose live Composer preferences through the host plugin's `Config` schema and the client `configForms` service; keep automatic placement and its threshold editable in the new settings panel.

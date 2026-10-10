@@ -2,7 +2,7 @@
   "include": [
     { "channel": "current-rc", "plugin": "working-tree", "dsh": "0.2.0-rc.2", "browser": "chromium", "script": "test-dsh-compat.mjs" },
     { "channel": "current-rc", "plugin": "working-tree", "dsh": "0.2.0-rc.2", "browser": "webkit", "script": "test-dsh-compat.mjs" },
-    { "channel": "alpha", "plugin": "working-tree", "dsh": "0.2.1-alpha.1", "browser": "chromium", "script": "test-dsh-compat.mjs" },
-    { "channel": "alpha", "plugin": "working-tree", "dsh": "0.2.1-alpha.1", "browser": "webkit", "script": "test-dsh-compat.mjs" }
+    { "channel": "alpha", "plugin": "working-tree", "dsh": "0.2.1-alpha.2", "browser": "chromium", "script": "test-dsh-compat.mjs" },
+    { "channel": "alpha", "plugin": "working-tree", "dsh": "0.2.1-alpha.2", "browser": "webkit", "script": "test-dsh-compat.mjs" }
   ]
 }

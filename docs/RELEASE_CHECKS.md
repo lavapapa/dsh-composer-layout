@@ -1,19 +1,19 @@
 # Composer Layout release contract
 
-This document defines the current product behavior and the evidence required before publishing a version. It intentionally describes the released plugin, not earlier experiments or features that were removed.
+This document defines the current presentation contract and the evidence required before publishing a version. Versioned evidence below identifies tested artifacts; npm publication and profile activation are separate steps.
 
 ## Current scope
 
-The plugin owns presentation and interaction around the DSH Composer. It does not alter model requests, session content, permissions, token accounting, or host-side conversation behavior.
+The plugin owns Composer placement, sizing, and overflow presentation. DSH owns submission, transcript following, reading position, requests, session content, permissions, and token accounting; native editor selection and draft scrolling follow the browser.
 
-| Area | Released behavior | Required evidence |
+| Area | Implementation behavior | Required evidence |
 | --- | --- | --- |
 | Placement | Bottom, Right, and Automatic are available. Automatic selects Right when the conversation main area's width-to-height ratio reaches the configured threshold (0.5–2, default 1) and both columns fit. The configured default applies to a new session; with session memory enabled, a session keeps its own preference and width. | Settings check, Automatic threshold check, and session-switch check in a real browser. |
 | Responsive layout | Right docking is available only when Chat and Composer can both keep their minimum usable width. Below that threshold the plugin removes its split adapter and hands the Composer back to DSH's normal bottom layout; the recovery rail remains available, shifted left away from the Composer input border, the disabled Right choice explains the width requirement, and the side layout returns when width is restored (with Automatic also requiring its ratio threshold). | `layout-policy` tests, component fallback check, and narrow-to-wide browser check. |
 | Width control | The visible divider resizes the right pane within the shared Chat/Composer bounds. In split layout, both native transcript-width handles are hidden and Chat uses the available left-column width; independent transcript whitespace adjustment is unavailable. Bottom layout restores the native handles and retains DSH's saved width preference. | `layout-policy` tests, min/max divider drag, hidden native handles in split, and restored native width dragging in Bottom in a real browser. |
-| Reading and drafting | Chat and a long right-side draft scroll independently. The split adapter handles nested conversation scroll containers and bridges scroll events between the host container and Chat. With a short draft, the native contenteditable editor fills the visible right-side input surface, so clicking, multi-click selection, and drag selection work in unused space without scrolling Chat or changing the draft. | Real-browser assertions against `[data-composer-input]`: short-draft geometry fills the scrollport, blank-area hit testing reaches the native editor with a text cursor, native pointer selection works, and long-draft scrolling leaves Chat unchanged. A focus-only test is insufficient. |
-| Composer popups | In the right layout, slash and reference candidates stay inside the pane. Opening another Composer popup closes those candidates first; a reference picker remains reachable beside a long draft and inserts the selected file token; third-party right-slot controls collapse into an ellipsis popup when space is limited. The normal bottom Composer keeps DSH's native popup behavior. | Component popup test plus slash, long-draft reference picker, model, access, context, and third-party overflow checks in a real browser. |
-| Host boundary | The plugin uses the current DSH Web Composer structure only. It does not maintain a compatibility path for obsolete host layouts and does not change DSH's own bottom layout or the Home Hero input. | Current-version compatibility check plus Hero and bottom-layout regression checks. |
+| Reading and drafting | Chat and a long right-side draft scroll independently. Both layouts retain DSH's original transcript scroll owner, submission following, reading anchors, and navigation. Right docking changes the input presentation while keeping the native bottom seat's viewport geometry. With a short draft, the native contenteditable editor fills the visible right-side input surface, so clicking, multi-click selection, and drag selection work in unused space without scrolling Chat or changing the draft. | Real-browser assertions against `[data-composer-input]`: short-draft geometry fills the scrollport, blank-area hit testing reaches the native editor with a text cursor, native pointer selection works, and long-draft scrolling leaves Chat unchanged. A focus-only test is insufficient. |
+| Composer popups | In the right layout, slash and reference candidates stay inside the pane. Opening another Composer popup closes those candidates first; a reference picker remains reachable beside a long draft and inserts the selected file token; third-party right-slot controls collapse into an ellipsis popup when space is limited in either placement. Native model/access/context popup behavior stays unchanged in Bottom; only overflowing third-party controls move into the plugin's bounded popup. | Component popup test plus slash, long-draft reference picker, model, access, context, and third-party overflow checks in a real browser. |
+| Host boundary | The adapter targets the current DSH Web Composer structure. Bottom retains the native editor, submission, and popup behavior, with shared folding for third-party controls; Home Hero retains its native layout. | Current-version compatibility check plus Hero and bottom-layout regression checks. |
 
 The native editor contract follows the host's contenteditable behavior, not the removed textarea implementation. Pointer tests require word/paragraph selection and nonempty selection when dragging from blank space into text. Dragging from text into distant blank space is compared against a bare native contenteditable in the same browser: Chromium can collapse this selection in both, so that outcome alone is not attributed to the plugin.
 
@@ -21,7 +21,7 @@ The native editor contract follows the host's contenteditable behavior, not the 
 
 The executable pairing contract is [`scripts/dsh-compat-matrix.json`](../scripts/dsh-compat-matrix.json), keyed by `channel`, `plugin`, `dsh`, and `browser`. Release CI expands all configured pairs independently with `fail-fast: false`. Each pairing runs in Chromium and Playwright WebKit; WebKit coverage does not constitute testing the user's installed Safari browser.
 
-The active matrix currently covers the DSH current RC `0.2.0-rc.2` and latest alpha `0.2.1-alpha.1`; each row packs the working tree and exercises the current feature contract against its explicitly pinned host. The previous RC line `0.1.2` was verified in earlier releases and is intentionally not rerun in this maintenance cycle. A new host version is a test target until its run passes, not an automatic extension of an older compatibility claim.
+The active matrix currently covers the DSH current RC `0.2.0-rc.2` and latest alpha `0.2.1-alpha.2`; each row packs the working tree and exercises the current feature contract against its explicitly pinned host. The previous RC line `0.1.2` was verified in earlier releases and is intentionally not rerun in this maintenance cycle. A new host version is a test target until its run passes, not an automatic extension of an older compatibility claim.
 
 The scheduled channel probe resolves npm `next` (the current RC line) and `alpha` to concrete DSH versions before building its job matrix. A passing probe informs the next reviewed matrix update; it does not rewrite the release matrix or publish a plugin.
 
@@ -55,7 +55,7 @@ pnpm test:dsh-matrix
 | --- | --- | --- |
 | Policy and storage tests | Breakpoint math, resize bounds, and one session leaking into another | Host-provided controls that the plugin does not own |
 | Component tests | Installing and removing the split adapter, restoring DSH's original scroll owner, temporary narrow fallback, divider limits, popup dismissal, and native pointer-event non-interference | Browser layout, scrolling, and native text-selection rendering |
-| DSH compatibility browser test | Exact packed artifact installation, host startup, plugin loading, Hero geometry, settings, active-conversation split widths and resizing, hidden native transcript-width handles in split, restored native width dragging in Bottom, Automatic placement, disabled Right action, narrow-to-wide restoration, scrolling after layout settles, native editor blank-area geometry and hit testing, pointer selection, and independent long-draft scrolling | Real menus and stream-end timing |
+| DSH compatibility browser test | Exact packed artifact installation, host startup, plugin loading, Hero geometry, settings, active-conversation split widths and resizing, hidden native transcript-width handles in split, restored native width dragging in Bottom, Automatic placement, disabled Right action, narrow-to-wide restoration, sampled reader and following-tail restoration across sessions in both placements, scrolling after layout settles, native editor blank-area geometry and hit testing, pointer selection, and independent long-draft scrolling | Real menus and stream-end timing |
 | Release browser pass | — | Active-session scrolling, drag-selection, popup positions, narrow-to-wide restore, and bottom-layout non-interference |
 
 Before a release, also complete this short real-browser pass against the intended DSH version:
@@ -69,6 +69,28 @@ Before a release, also complete this short real-browser pass against the intende
 7. Return to Bottom and confirm the plugin no longer changes DSH's normal input-trigger behavior. Confirm both native transcript-width handles return, DSH's saved width preference is retained, and dragging a native handle adjusts the transcript width.
 
 Record the DSH version, plugin version, and the result of this browser pass in the release notes or pull request. A failed DSH host test that does not load this plugin is an upstream test issue; it must be reported separately rather than treated as a Composer Layout regression.
+
+## 0.1.24 release evidence
+
+On 2026-10-10, the frozen 0.1.24 package passed DSH `0.2.0-rc.2` and `0.2.1-alpha.2` in isolated Chromium and WebKit profiles. All 36 local tests, type checking, frozen-lockfile installation, build, package checks, and independent source review passed. The existing icon and English/Chinese metadata were also read successfully from the packed package by the official RC2 `readPluginMeta` reader.
+
+The four browser pairings cover 48 sampled reader-position returns, 32 native following-tail returns, and 16 official click/Enter submissions through an isolated transport fixture. They include Host-persisted settings, native editor selection and draft scrolling, Hero geometry, responsive layout and width controls, slash/reference pickers, and third-party control folding in both placements. Overflow checks preserve original node identity, callbacks, font metrics and widget sizes; verify a fitting 30px/70px/130px horizontal row; exercise an inline 340px quota tooltip outside the popup without resizing or scrollbars; and check cross-divider hits, native overlay layers, viewport changes and natural five-line widget growth.
+
+These browser controls are synthetic. Installed Codex/AGY widgets, arbitrary nested body-portaled menus, extremely large control collections, real RPC latency/failure, queue/steer, sub-500ms session switches, and anchors outside the initial history window remain integration checks. Earlier local 0.1.23 Codex checks are separate evidence. Playwright WebKit coverage does not establish a pass in the user's installed Safari browser.
+
+## 0.1.22 validation evidence
+
+On 2026-10-09, the packed 0.1.22 artifact passed the complete RC2/alpha × Chromium/WebKit matrix. All 35 local tests, type checking, and build/package checks passed. Independent source review accepted the native surface/stacking change and its native anchored-positioning follow-up.
+
+New default browser assertions compare the overflow shell's radius, elevation, material fill, and backdrop filter with the real native permissions menu. They verify vertical 34px/13px/20px button rows, original control nodes and callbacks, real cross-divider pointer hits and hover/click, and body overlays at native HoverCard/Menu levels remaining above the pane. In both placements the controls stay within the viewport. With the popup open, viewport resizing and actual widget-height growth re-anchor the unchanged controls. The frozen 0.1.21 artifact fails the new surface assertion; the interim static-position candidate independently fails the open-popup viewport regression.
+
+Third-party entries in this matrix are synthetic controls, not installed AGY/Codex widgets. Their state, DOM ownership and interaction are preserved rather than replaced with Menu items; popup shell and positioning reuse native primitives. Arbitrary nested third-party menus remain an integration check.
+
+## 0.1.21 validation evidence
+
+The exact packed 0.1.21 artifact passed DSH `0.2.0-rc.2` and `0.2.1-alpha.1` in Chromium and WebKit on 2026-10-09. The default matrix includes 48 sampled cross-session reader returns, 32 following-tail returns, and 16 official click/Enter submissions with native durable and streamed-response projection. It also checks independent native draft scrolling and third-party control overflow in both placements. Transport is isolated; real RPC delay/failure, queue/steer, sub-500ms switching, and anchors outside the initial history window remain integration checks. All 33 unit/component tests, type checking, package verification, and independent source/test review passed.
+
+The unchanged formal 0.1.20 archive reproduced all six Right-layout returns at the top in a Composer-only profile. Its Bottom control and a profile without Composer retained their reading positions. The same ordinary switching scenarios pass with 0.1.21; the adapter preserves the native scrollport's identity and complete clipping region, along with the native bottom seat's reading geometry.
 
 ## 0.1.20 release evidence
 

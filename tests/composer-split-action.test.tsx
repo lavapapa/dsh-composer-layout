@@ -3,6 +3,11 @@ import { cleanup, createEvent, fireEvent, render, screen, waitFor } from '@testi
 import type { ReactNode } from 'react'
 import { ComposerSplitAction, type ComposerSplitActionProps } from '../src/client/ComposerSplitAction.tsx'
 
+vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => ({
+  MenuSurface: (props: import('react').ComponentPropsWithoutRef<'div'>) => <div {...props} />,
+  useAnchoredPosition: ({ open }: { open: boolean }) => open ? { left: 12, top: 12 } : null,
+}))
+
 let measuredWidth = 1_000
 let measuredHeight = 800
 let trailingWidth = 100
@@ -37,7 +42,7 @@ function pointerEvent(type: string, clientX: number): Event {
 beforeEach(() => {
   vi.stubGlobal('ResizeObserver', ResizeObserverMock)
   vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function () {
-    const body = this.hasAttribute('data-conversation-scroll') || this.hasAttribute('data-dsh-composer-split-body')
+    const body = this.hasAttribute('data-conversation-scroll') || this.hasAttribute('data-dsh-composer-split-body') || this.getAttribute('data-testid') === 'conversation-body-wrapper' || this.hasAttribute('data-phase')
     const testId = this.getAttribute('data-testid')
     const width = body ? measuredWidth
       : testId === 'input-row' ? (rowCapacity ?? trailingWidth) + 100
@@ -111,7 +116,7 @@ function activeFixture(props: FixtureProps = {}) {
     <div data-phase={phase}><div data-testid="conversation-body-wrapper">
       <div data-conversation-scroll="">
         <div {...(sessionSurface ? { 'data-slot': 'conversation.session' } : {})}>
-          {sessionSurface && <div data-testid="chat" />}
+          {sessionSurface && <div key={sessionId} data-testid="chat" />}
         </div>
         <div data-composer-seat="">
           <div data-composer-card="">
@@ -235,8 +240,8 @@ describe('ComposerSplitAction', () => {
 
     await screen.findByRole('separator', { name: /调整输入区域宽度/ })
     expect(root.dataset.dshComposerSplitActive).toBe('true')
-    expect(body.hasAttribute('data-conversation-scroll')).toBe(false)
-    expect(chat.hasAttribute('data-conversation-scroll')).toBe(true)
+    expect(body.hasAttribute('data-conversation-scroll')).toBe(true)
+    expect(chat.hasAttribute('data-conversation-scroll')).toBe(false)
     expect(composer.dataset.dshComposerSplitPane).toBe('')
 
     measuredWidth = 640
@@ -252,8 +257,8 @@ describe('ComposerSplitAction', () => {
     notifyResize()
     await screen.findByRole('separator', { name: /调整输入区域宽度/ })
     expect(root.dataset.dshComposerSplitActive).toBe('true')
-    expect(body.hasAttribute('data-conversation-scroll')).toBe(false)
-    expect(chat.hasAttribute('data-conversation-scroll')).toBe(true)
+    expect(body.hasAttribute('data-conversation-scroll')).toBe(true)
+    expect(chat.hasAttribute('data-conversation-scroll')).toBe(false)
     expect(composer.dataset.dshComposerSplitPane).toBe('')
   })
 
@@ -267,25 +272,46 @@ describe('ComposerSplitAction', () => {
     await waitFor(() => {
       expect(view.container.querySelector('[data-dsh-composer-split-active]')).not.toBeNull()
       expect(view.container.querySelector('[data-dsh-composer-split-pane]')).not.toBeNull()
+      const root = view.container.querySelector<HTMLElement>('[data-dsh-composer-split-active]')
+      expect(root?.style.getPropertyValue('--dsh-composer-pane-height')).toBe('800px')
+      expect(root?.style.getPropertyValue('--dsh-composer-pane-left')).not.toBe('')
     })
   })
 
-  it('forwards reader scrolls to the host DSH may have observed before a layout change', async () => {
+  it('reapplies shared placement settings and marks the new session surface without a resize', async () => {
     measuredWidth = 1_000
-    const view = fixture()
+    const sharedSettings = settings('right')
+    const view = fixture({ sessionId: 'session-a', settings: sharedSettings })
+    await screen.findByRole('separator', { name: /调整输入区域宽度/ })
+    const firstChat = view.container.querySelector('[data-testid="chat"]')
+
+    view.rerender(activeFixture({ sessionId: 'session-b', settings: sharedSettings }))
+    await waitFor(() => {
+      expect(screen.queryByRole('separator', { name: /调整输入区域宽度/ })).not.toBeNull()
+      const nextChat = view.container.querySelector('[data-testid="chat"]')
+      expect(nextChat).not.toBe(firstChat)
+      expect(nextChat?.hasAttribute('data-dsh-composer-split-chat')).toBe(true)
+    })
+  })
+
+  it('preserves the native scroll owner, position, and event stream in side layout', async () => {
+    measuredWidth = 1_000
+    const view = fixture({ settings: settings('bottom') })
     const body = view.container.querySelector<HTMLElement>('[data-conversation-scroll]')
-    const chat = view.container.querySelector<HTMLElement>('[data-testid="chat"]')
-    if (body === null || chat === null) throw new Error('fixture scroll hosts are missing')
+    const chat = view.getByTestId('chat')
+    if (body === null) throw new Error('fixture scroll owner is missing')
+    body.scrollTop = 240
     let bodyEvents = 0
-    let chatEvents = 0
     body.addEventListener('scroll', () => { bodyEvents += 1 })
-    chat.addEventListener('scroll', () => { chatEvents += 1 })
-
+    fireEvent.click(await screen.findByRole('button', { name: '打开输入区域布局菜单' }))
+    fireEvent.click(await screen.findByRole('button', { name: '停靠到右侧' }))
+    await screen.findByRole('separator', { name: /调整输入区域宽度/ })
+    expect(view.container.querySelector('[data-conversation-scroll]')).toBe(body)
+    expect(body.scrollTop).toBe(240)
     fireEvent.scroll(chat)
+    expect(bodyEvents).toBe(0)
     fireEvent.scroll(body)
-
-    expect(bodyEvents).toBeGreaterThanOrEqual(2)
-    expect(chatEvents).toBeGreaterThanOrEqual(2)
+    expect(bodyEvents).toBe(1)
   })
 
   it('keeps a divider drag inside the shared Composer and Chat width limits', async () => {
@@ -390,6 +416,32 @@ describe('ComposerSplitAction', () => {
     })
   })
 
+  it.each(['right', 'bottom'] as const)('uses a native menu surface without replacing %s overflow controls', async placement => {
+    measuredWidth = 1_000
+    const onAction = vi.fn()
+    const view = fixture({
+      settings: settings(placement),
+      rightSlotItems: <><button type="button" onClick={onAction}>任务控制</button><span role="status">7d</span></>,
+    })
+    const action = screen.getByRole('button', { name: '任务控制' })
+    const status = screen.getByRole('status')
+    const trigger = await screen.findByRole('button', { name: '显示额外输入控件' })
+    const slot = action.closest('[data-slot="conversation.input.right"]')
+    fireEvent.click(trigger)
+    expect(slot?.querySelector('[data-dsh-composer-overflow-surface]')).not.toBeNull()
+    notifyResize()
+    expect(screen.getByRole('button', { name: '任务控制' })).toBe(action)
+    expect(screen.getByRole('status')).toBe(status)
+    expect(trigger.getAttribute('aria-expanded')).toBe('true')
+    fireEvent.click(action)
+    expect(onAction).toHaveBeenCalledTimes(1)
+    fireEvent.keyDown(document, { key: 'Escape' })
+    await waitFor(() => { expect(slot?.querySelector('[data-dsh-composer-overflow-surface]')).toBeNull() })
+    expect(document.activeElement).toBe(trigger)
+    view.unmount()
+    expect(document.querySelector('[data-dsh-composer-overflow-surface]')).toBeNull()
+  })
+
   it('keeps third-party right-slot controls visible when the native toolbar has enough width', async () => {
     measuredWidth = 1_000
     trailingWidth = 500
@@ -404,15 +456,19 @@ describe('ComposerSplitAction', () => {
     expect(screen.getByRole('button', { name: '额度' })).toBeTruthy()
   })
 
-  it('keeps third-party right-slot controls in the native toolbar outside the side layout', async () => {
+  it('folds overflowing third-party controls in bottom layout without remounting them', async () => {
     measuredWidth = 1_000
     fixture({
       settings: settings('bottom'),
       rightSlotItems: <button type="button" aria-label="额度">额度</button>,
     })
     await screen.findByRole('button', { name: '打开输入区域布局菜单' })
-    expect(screen.queryByRole('button', { name: '显示额外输入控件' })).toBeNull()
-    expect(screen.getByRole('button', { name: '额度' }).closest('[data-slot="conversation.input.right"]')?.dataset.dshComposerSlotOverflow).toBeUndefined()
+    const quota = screen.getByRole('button', { name: '额度' })
+    const trigger = await screen.findByRole('button', { name: '显示额外输入控件' })
+    expect(quota.closest('[data-slot="conversation.input.right"]')?.dataset.dshComposerSlotOverflow).toBe('')
+    fireEvent.click(trigger)
+    expect(screen.getByRole('button', { name: '额度' })).toBe(quota)
+    expect(quota.closest('[data-slot="conversation.input.right"]')?.dataset.dshComposerSlotOverflowOpen).toBe('')
   })
 
   it('records an explicit dock choice for the current session', async () => {

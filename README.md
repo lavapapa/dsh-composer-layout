@@ -1,103 +1,133 @@
-# DSH Composer Layout
+<p align="center">
+  <img src="assets/icon.svg" width="72" alt="DSH Composer Layout icon">
+</p>
 
-**English** · [简体中文](README.zh.md)
+<h1 align="center">DSH Composer Layout</h1>
 
-[![Release](https://img.shields.io/github/v/tag/lavapapa/dsh-composer-layout?label=release)](https://github.com/lavapapa/dsh-composer-layout/tags)
-[![npm](https://img.shields.io/npm/v/dsh-composer-layout?label=npm)](https://www.npmjs.com/package/dsh-composer-layout)
-[![Included in Awesome DSH Plugin](https://img.shields.io/badge/Included%20in-Awesome%20DSH%20Plugin-3b82f6?logo=github)](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/blob/main/data/plugins/lavapapa__dsh-composer-layout.yml)
-[![Included in Awesome DeepSeek Harness Plugins](https://img.shields.io/badge/Included%20in-Awesome%20DeepSeek%20Harness%20Plugins-3b82f6?logo=github)](https://github.com/Zhiyuan-Fan/Awesome-DeepSeek-Harness-Plugins)
-[![Included in Awesome DSH Plugins](https://img.shields.io/badge/Included%20in-Awesome%20DSH%20Plugins-3b82f6?logo=github)](https://github.com/cccakeee/awesome-dsh-plugins/blob/main/docs/categories/web-ui.en.md)
-[![Included in Oh My DSH](https://img.shields.io/badge/Included%20in-Oh%20My%20DSH-3b82f6?logo=github)](https://github.com/NoWint/Oh-My-DSH)
-[![License](https://img.shields.io/github/license/lavapapa/dsh-composer-layout)](LICENSE)
+<p align="center"><strong>Switch the controls layout.</strong><br>A dockable Composer for <a href="https://github.com/deepseek-ai/deepseek-harness">DeepSeek Harness</a> Web.</p>
 
-[Overview](#dsh-composer-layout) · [Install](#install) · [Why side by side?](#why-a-side-by-side-composer) · [See it in DSH](#see-it-in-dsh) · [Switch and resize](#switch-and-resize) · [Features](#what-it-adds) · [Release checks](docs/RELEASE_CHECKS.md) · [Contributing](CONTRIBUTING.md) · [简体中文](README.zh.md)
+<p align="center">
+  <a href="https://www.npmjs.com/package/dsh-composer-layout"><img src="https://img.shields.io/npm/v/dsh-composer-layout?style=flat-square&color=4f6bff" alt="npm version"></a>
+  <a href="https://github.com/lavapapa/dsh-composer-layout/tags"><img src="https://img.shields.io/github/v/tag/lavapapa/dsh-composer-layout?style=flat-square&label=release&color=4f6bff" alt="GitHub release tag"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/lavapapa/dsh-composer-layout?style=flat-square&color=64748b" alt="MIT license"></a>
+</p>
 
-> **Keep the answer in view while you write.** Dock Composer to the right so the answer and your growing draft can stay side by side.
+<p align="center"><strong>English</strong> · <a href="README.zh.md">简体中文</a></p>
+<p align="center"><a href="#features">Features</a> · <a href="#install">Install</a> · <a href="#use-it-in-dsh">Usage</a> · <a href="CHANGELOG.md">Changelog</a></p>
 
-[DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) Web plugin that lets the Composer stay at the bottom or dock in a right-side column. The chat and Composer keep their own space, while the normal DSH model, permission, quota, session, and tool behavior remains intact.
+![Answer and draft side by side — layout illustration](assets/readme/banner-en.svg)
 
-![Keep the answer in view while you write](assets/hero-en.png)
+Long answers and detailed prompts deserve their own space. Dock Composer to the right to reference an answer while shaping your next message; keep it at the bottom for compact conversations, or let Automatic choose as the window changes. Models, permissions, sessions, tools, and token accounting continue to use DSH's native behavior.
 
-## Why a side-by-side Composer?
+## Features
 
-The familiar bottom Composer works well when both the answer and the next message are short. Once either one grows, they have to compete for the same vertical strip: a long answer pushes the input away, while a long draft hides the material it is supposed to reference. The work then turns into compensation—copy a detail out, resize the input, scroll back to recover context, search for the passage just read, and repeat.
+Three small layout changes make the reading-and-writing workflow easier to manage:
 
-This is especially wasteful on a desktop. Most desktop displays are wide; horizontal room is usually available, while the height shared by a growing answer, a growing draft, and browser chrome is scarce. A vertical layout spends the abundant dimension poorly and makes the constrained one do all the work.
+<table>
+  <tr>
+    <td width="33%" valign="top"><strong>↔ Side-by-side drafting</strong><br><br>Give the answer and draft separate vertical space. Drag the divider to set their balance; scroll a long draft independently.</td>
+    <td width="33%" valign="top"><strong>▥ Adaptive layout</strong><br><br>Choose Bottom, Right, or Automatic. Narrow windows temporarily stack the panes; your Right preference returns when they fit again.</td>
+    <td width="33%" valign="top"><strong>… Space-aware controls</strong><br><br>In Bottom and Right layouts, overflowing third-party input controls fold into a <code>…</code> popup, keeping their actions within reach.</td>
+  </tr>
+</table>
 
-Docking Composer to the right gives reading and writing separate vertical space. The conversation can stay visible as it grows; the draft can become as detailed as the task requires. The important change is simultaneous access: read a passage, think through it, and shape the corresponding part of the next prompt without losing either surface. It is a small layout change that removes a recurring interruption from long-form work.
+![Adaptive layout and overflow controls — feature illustrations, not screenshots](assets/readme/features-en.svg)
 
-## See it in DSH
+**More everyday details:**
 
-![A real DSH Web session beside a tall right-side Composer](assets/screenshots/hero-en.png)
+- **Per-session memory.** With “Remember this session layout” enabled, each session keeps its placement and manually resized right-pane width in this browser.
+- **Native editing.** The right-side editor fills the available input surface, including the blank area below a short draft, and retains native text selection.
+- **Reachable pickers.** Slash and file-reference candidates stay inside the side pane. Opening another Composer popup closes those candidates first.
+- **Your preferred width.** Choose a narrow, medium, or wide default right pane; fine-tune it with the divider.
 
-## Switch and resize
-
-![Right-edge handle, layout switch, and right-pane resize](assets/screenshots/layout-guide-en.webp)
-
-## What it adds
-
-- Bottom, Right, and Automatic Composer placement from **Settings → Plugins → Composer Layout**. Automatic uses the main area's width-to-height ratio, with a threshold of 0.5–2 (default 1), and requires enough width for both columns.
-- A docking handle shifted left away from the Composer input border; in the right layout it also resizes the Composer pane. When Right is unavailable, its disabled action explains the width requirement.
-- Per-session placement and manually resized right-pane width when “Remember this session layout” is enabled.
-- When the window cannot fit both columns, temporarily stack the Composer while retaining a layout rail; the remembered right-side layout returns automatically once width is available again.
-- In the right-side layout, close slash/reference candidates before another Composer popup opens, so model, access, and context panels do not overlap them. Third-party right-slot controls collapse into an ellipsis popup when space is limited.
-- Adapt to DSH's nested conversation scroll containers and bridge scroll events between the host container and Chat. See [release checks](docs/RELEASE_CHECKS.md) for verification scope and the outstanding stream-end timing issue.
-
-In the right-side layout, Chat uses the available left-column width and the plugin divider adjusts reading space. DSH's two native transcript-width handles are hidden to prevent them from overlapping Composer; independent transcript whitespace adjustment is unavailable in this mode. Returning to Bottom restores those handles and preserves DSH's saved width preference.
-
-The plugin is presentation-only: it does not add model-facing tools, change prompts, or alter token accounting.
+See the [changelog](CHANGELOG.md) for version differences. Entries marked **Unpublished** describe development previews.
 
 ## Install
 
-### Install from npm
-
-The npm package contains the prebuilt plugin bundle. Consult the [version-paired checks](docs/RELEASE_CHECKS.md#version-paired-browser-checks) for the tested DSH releases. Check the npm version with `npm view dsh-composer-layout version` before installing.
+Use your intended Web profile in place of `web`. The npm package includes the prebuilt plugin bundle.
 
 ```sh
 dsh plugin --profile web add dsh-composer-layout@latest
+```
+
+Follow the plugin manager's loading instructions. If it reports that a restart is needed, restart the target Web service using its usual launch method and refresh the page. Then open **Settings → Built-in plugins → Composer Layout** and choose **Right** or **Automatic**. If you launch DSH manually:
+
+```sh
 dsh web --profile web
 ```
+
+Check the published version with `npm view dsh-composer-layout version`. Confirm the bundle is in the intended profile with `dsh --profile web --dump-config`. For dependency declarations, see [`package.json`](package.json).
+
+<details>
+<summary><strong>Install directly from GitHub</strong></summary>
 
 ### Install directly from GitHub
 
-DSH can install the plugin bundle from a versioned GitHub release:
+Choose a [published release tag](https://github.com/lavapapa/dsh-composer-layout/tags) that matches your DSH version; supported ranges are declared in `peerDependencies` in [`package.json`](package.json). Replace `<release-tag>` below with that tag:
 
 ```sh
-dsh plugin --profile web add "github:lavapapa/dsh-composer-layout#v0.1.20"
-dsh web --profile web
+dsh plugin --profile web add "github:lavapapa/dsh-composer-layout#<release-tag>"
 ```
 
-Then open **Settings → Plugins → Composer Layout** and select **Right side**. Restarting the Web profile is required because DSH does not hot-reload profile patches.
+The repository includes the host and browser artifacts needed for GitHub installs. Follow the plugin manager's loading instructions; if a restart is needed, use the target service's usual launch method and refresh its page.
 
-The repository ships the prebuilt host and browser artifacts used by this command, so installation does not need an install-time build step. To confirm that DSH added the bundle to the intended profile:
+</details>
 
-```sh
-dsh --profile web --dump-config
-```
+<details>
+<summary><strong>Update an existing installation</strong></summary>
 
-### Update
-
-To move an existing installation to the current npm release (check it with `npm view dsh-composer-layout version` first):
+Stop the Web service using that profile with its usual service controls, then check the npm version and replace the plugin in the same profile:
 
 ```sh
+npm view dsh-composer-layout version
 dsh plugin --profile web remove dsh-composer-layout
 dsh plugin --profile web add dsh-composer-layout@latest
-dsh web --profile web
 ```
 
-Dependency declarations are in [`package.json`](package.json); the DSH versions actually verified are recorded in [release checks](docs/RELEASE_CHECKS.md). The [DSH compatibility workflow](https://github.com/lavapapa/dsh-composer-layout/actions/workflows/dsh-latest-compat.yml) regularly checks the plugin against the current DSH release.
+Start the target Web service again with its usual launch method and refresh the page.
+
+</details>
+
+## Use it in DSH
+
+Set your default in **Settings → Built-in plugins → Composer Layout**, or use the rail at the conversation's right edge to switch between Bottom and Right. In Right layout, drag the divider to resize the Composer pane.
+
+![Right-edge rail, layout switch, and right-pane resizing](assets/screenshots/layout-guide-en.webp)
+
+| Mode | When to use it | Behavior |
+| --- | --- | --- |
+| **Bottom** | Short messages or a narrow window | DSH's compact bottom editor. |
+| **Right** | Read a long answer while drafting a detailed prompt | Two columns when they fit; temporary Bottom layout when space runs out. |
+| **Automatic** | Change window size often | Uses the conversation main area's width-to-height ratio and the minimum width needed by both columns. |
+
+The Automatic threshold is editable in the plugin settings. Enable session memory to keep each conversation's layout and width. The Home/new-session screen retains DSH's native layout.
+
+<details>
+<summary><strong>Transcript width in Right layout</strong></summary>
+
+Chat uses the available left-column width; the plugin divider adjusts its reading space. DSH's two native transcript-width handles are hidden in Right layout. Returning to Bottom restores those handles and preserves DSH's saved width preference.
+
+</details>
 
 ## Development
 
-The repository intentionally commits the generated `lib/` artifacts used by GitHub installs. The plugin owns its implementation under `src/`; run `pnpm typecheck`, `pnpm build`, and `pnpm test` before publishing. Each release is also checked in a clean matching DSH checkout.
+The [changelog](CHANGELOG.md) separates published work from development previews. Its scroll/overflow entries cover native reading-position restoration, extra-control folding in Bottom, native menu surfaces and positioning, original control sizing, and unclipped inline tooltips. Check the corresponding release entry before expecting those refinements in an npm installation.
 
-## Related links
+The plugin owns its implementation under [`src/`](src/) and commits the generated [`lib/`](lib/) artifacts used by GitHub installs. Before publishing:
 
-- [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)
-- [DSH plugin topic](https://github.com/topics/dsh-plugin)
-- [Awesome DSH Plugin](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin)
-- [DSH Market](https://github.com/dsh-market/dsh-market)
+```sh
+pnpm typecheck
+pnpm build
+pnpm test
+pnpm test:dsh-matrix
+```
 
-## License
+For contributions, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
-MIT. See [`LICENSE`](LICENSE).
+## Community
+
+Find the plugin in [Awesome DSH Plugin](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/blob/main/data/plugins/lavapapa__dsh-composer-layout.yml), [Awesome DeepSeek Harness Plugins](https://github.com/Zhiyuan-Fan/Awesome-DeepSeek-Harness-Plugins), [Awesome DSH Plugins](https://github.com/cccakeee/awesome-dsh-plugins/blob/main/docs/categories/web-ui.en.md), and [Oh My DSH](https://github.com/NoWint/Oh-My-DSH).
+
+[Report a bug or suggest a feature](https://github.com/lavapapa/dsh-composer-layout/issues) · [DSH plugin topic](https://github.com/topics/dsh-plugin) · [DSH Market](https://github.com/dsh-market/dsh-market)
+
+<p align="center"><strong>More room for the next thought.</strong><br>MIT · <a href="LICENSE">License</a></p>

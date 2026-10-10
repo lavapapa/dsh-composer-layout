@@ -1,7 +1,8 @@
 {
   "name": "dsh-composer-layout",
-  "version": "0.1.20",
-  "description": "Keep long answers and detailed prompts side by side with a dockable DSH Composer.",
+  "version": "0.1.24",
+  "description": "Switch between Bottom, Right, and Automatic Composer layouts, with responsive sizing and space-aware controls.",
+  "icon": "assets/icon.svg",
   "keywords": [
     "deepseek-harness",
     "dsh",
@@ -23,6 +24,7 @@
     },
     "./client": "./lib/client.js",
     "./assets/icon.svg": "./assets/icon.svg",
+    "./locale/*.json": "./locale/*.json",
     "./package.json": "./package.json"
   },
   "files": [
@@ -30,6 +32,8 @@
     "lib/*.d.ts",
     "cordis.patch.yml",
     "assets/icon.svg",
+    "locale/*.json",
+    "assets/readme/*.svg",
     "assets/hero-en.png",
     "assets/hero-zh.png",
     "assets/screenshots/hero-en.png",
@@ -38,6 +42,7 @@
     "assets/screenshots/layout-guide-zh.webp",
     "README.md",
     "README.zh.md",
+    "CHANGELOG.md",
     "LICENSE"
   ],
   "repository": {
@@ -59,6 +64,7 @@
   },
   "devDependencies": {
     "@deepseek-ai/cordis": "4.0.5-alpha.1",
+    "@deepseek-ai/dsh-client-ui-primitives": "0.2.1-alpha.2",
     "@testing-library/react": "^16.2.0",
     "@types/react": "~18.3.18",
     "@types/react-dom": "~18.3.5",
@@ -91,15 +97,16 @@
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": "~4.0.4 || ~4.0.5-alpha.1",
-    "@deepseek-ai/dsh-api-session-controller": "0.2.0-rc.2 || 0.2.1-alpha.1",
-    "@deepseek-ai/dsh-client-locale": "0.2.0-rc.2 || 0.2.1-alpha.1",
-    "@deepseek-ai/dsh-client-ui-renderer": "0.2.0-rc.2 || 0.2.1-alpha.1",
-    "@deepseek-ai/dsh-client-ui-session": "0.2.0-rc.2 || 0.2.1-alpha.1",
-    "@deepseek-ai/dsh-client-ui-conversation": "0.2.0-rc.2 || 0.2.1-alpha.1",
-    "@deepseek-ai/dsh-client-ui-input-trigger": "0.2.0-rc.2 || 0.2.1-alpha.1",
-    "@deepseek-ai/dsh-client-ui-settings": "0.2.0-rc.2 || 0.2.1-alpha.1",
-    "@deepseek-ai/dsh-client-ui-settings-plugins": "0.2.0-rc.2 || 0.2.1-alpha.1",
-    "@deepseek-ai/dsh-client-ui-slots": "0.2.0-rc.2 || 0.2.1-alpha.1",
+    "@deepseek-ai/dsh-api-session-controller": "0.2.0-rc.2 || 0.2.1-alpha.2",
+    "@deepseek-ai/dsh-client-locale": "0.2.0-rc.2 || 0.2.1-alpha.2",
+    "@deepseek-ai/dsh-client-ui-conversation": "0.2.0-rc.2 || 0.2.1-alpha.2",
+    "@deepseek-ai/dsh-client-ui-input-trigger": "0.2.0-rc.2 || 0.2.1-alpha.2",
+    "@deepseek-ai/dsh-client-ui-primitives": "0.2.0-rc.2 || 0.2.1-alpha.2",
+    "@deepseek-ai/dsh-client-ui-renderer": "0.2.0-rc.2 || 0.2.1-alpha.2",
+    "@deepseek-ai/dsh-client-ui-session": "0.2.0-rc.2 || 0.2.1-alpha.2",
+    "@deepseek-ai/dsh-client-ui-settings": "0.2.0-rc.2 || 0.2.1-alpha.2",
+    "@deepseek-ai/dsh-client-ui-settings-plugins": "0.2.0-rc.2 || 0.2.1-alpha.2",
+    "@deepseek-ai/dsh-client-ui-slots": "0.2.0-rc.2 || 0.2.1-alpha.2",
     "@deepseek-ai/schemastery": "^3.18.4",
     "react": ">=18.2.0 <19.0.0",
     "react-dom": ">=18.2.0 <19.0.0"
